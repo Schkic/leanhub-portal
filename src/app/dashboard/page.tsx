@@ -10,6 +10,7 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState<any>(null);
   const [recentAudits, setRecentAudits] = useState<any[]>([]);
   const [recentGemba, setRecentGemba] = useState<any[]>([]);
+  const [recentA3, setRecentA3] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -26,16 +27,20 @@ export default function DashboardPage() {
       const { data: audits } = await supabase
         .from('audits_5s')
         .select('id, created_at, firma, lokacija, total_score, datum')
-        .order('created_at', { ascending: false })
-        .limit(2);
+        .order('created_at', { ascending: false }).limit(2);
       setRecentAudits(audits || []);
 
       const { data: gemba } = await supabase
         .from('gemba_walk')
         .select('id, created_at, voditelj, lokacija, datum, cilj')
-        .order('created_at', { ascending: false })
-        .limit(2);
+        .order('created_at', { ascending: false }).limit(2);
       setRecentGemba(gemba || []);
+
+      const { data: a3 } = await supabase
+        .from('a3_obrazac')
+        .select('id, created_at, naslov, vlasnik, datum_otvaranja, odjel')
+        .order('created_at', { ascending: false }).limit(2);
+      setRecentA3(a3 || []);
 
       setLoading(false);
     };
@@ -83,16 +88,21 @@ export default function DashboardPage() {
           <div className="md:col-span-2 space-y-6">
 
             {/* Alati */}
-            <div className="grid sm:grid-cols-2 gap-4">
+            <div className="grid sm:grid-cols-3 gap-4">
               <a href="/alati/5s-audit" className="bg-white border border-[#e2e2e2] p-6 rounded-2xl hover:border-[#1a7a5e] hover:shadow-lg transition-all group">
                 <div className="w-12 h-12 bg-[#e8f5f0] text-[#1a7a5e] rounded-xl flex items-center justify-center mb-4 text-xl group-hover:scale-110 transition-transform">📋</div>
-                <h3 className="text-lg font-bold mb-1">Novi 5S Audit</h3>
-                <p className="text-sm text-[#5a5a5a]">Pokrenite novu provjeru čistoće i organizacije.</p>
+                <h3 className="text-base font-bold mb-1">Novi 5S Audit</h3>
+                <p className="text-xs text-[#5a5a5a]">Provjera čistoće i organizacije.</p>
               </a>
               <a href="/alati/gemba-walk" className="bg-white border border-[#e2e2e2] p-6 rounded-2xl hover:border-[#1a7a5e] hover:shadow-lg transition-all group">
                 <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-4 text-xl group-hover:scale-110 transition-transform">🚶</div>
-                <h3 className="text-lg font-bold mb-1">Novi Gemba Walk</h3>
-                <p className="text-sm text-[#5a5a5a]">Dokumentirajte zapažanja i definirajte akcije.</p>
+                <h3 className="text-base font-bold mb-1">Novi Gemba Walk</h3>
+                <p className="text-xs text-[#5a5a5a]">Zapažanja i akcijski plan.</p>
+              </a>
+              <a href="/alati/a3-obrazac" className="bg-white border border-[#e2e2e2] p-6 rounded-2xl hover:border-[#1a7a5e] hover:shadow-lg transition-all group">
+                <div className="w-12 h-12 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center mb-4 text-xl group-hover:scale-110 transition-transform">📄</div>
+                <h3 className="text-base font-bold mb-1">Novi A3 Obrazac</h3>
+                <p className="text-xs text-[#5a5a5a]">Strukturirano rješavanje problema.</p>
               </a>
             </div>
 
@@ -134,6 +144,27 @@ export default function DashboardPage() {
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-bold text-[#1a1a1a] truncate">{g.lokacija || 'Nenavedena lokacija'}</div>
                         <div className="text-xs text-[#9a9a9a]">{g.voditelj} · {g.datum ? new Date(g.datum).toLocaleDateString('hr-HR') : ''}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Nedavni A3 obrasci */}
+            {recentA3.length > 0 && (
+              <div className="bg-white border border-[#e2e2e2] rounded-2xl p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="font-bold text-[#1a1a1a]">Nedavni A3 obrasci</h3>
+                  <a href="/povijest" className="text-xs text-[#1a7a5e] font-semibold hover:underline">Svi →</a>
+                </div>
+                <div className="space-y-3">
+                  {recentA3.map((a) => (
+                    <div key={a.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#fafaf8] transition-all">
+                      <div className="w-10 h-10 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center text-lg">📄</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-bold text-[#1a1a1a] truncate">{a.naslov || 'Bez naslova'}</div>
+                        <div className="text-xs text-[#9a9a9a]">{a.odjel || '—'} · {a.datum_otvaranja ? new Date(a.datum_otvaranja).toLocaleDateString('hr-HR') : ''}</div>
                       </div>
                     </div>
                   ))}
