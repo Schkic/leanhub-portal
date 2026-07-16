@@ -12,6 +12,7 @@ export default function DashboardPage() {
   const [recentGemba, setRecentGemba] = useState<any[]>([]);
   const [recentA3, setRecentA3] = useState<any[]>([]);
   const [recentZasto, setRecentZasto] = useState<any[]>([]);
+  const [recentOEE, setRecentOEE] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -44,6 +45,11 @@ export default function DashboardPage() {
         .select('id, created_at, voditelj, odjel, datum, kategorija')
         .order('created_at', { ascending: false }).limit(2);
       setRecentZasto(zasto || []);
+
+      const { data: oee } = await supabase.from('oee_kalkulator')
+        .select('id, created_at, pogon, period, odgovorna_osoba, strojevi')
+        .order('created_at', { ascending: false }).limit(2);
+      setRecentOEE(oee || []);
 
       setLoading(false);
     };
@@ -88,8 +94,8 @@ export default function DashboardPage() {
         <div className="grid md:grid-cols-3 gap-6">
           <div className="md:col-span-2 space-y-6">
 
-            {/* Alati — 2x2 grid */}
-            <div className="grid sm:grid-cols-2 gap-4">
+            {/* Alati — 2x3 grid */}
+            <div className="grid sm:grid-cols-3 gap-4">
               <a href="/alati/5s-audit" className="bg-white border border-[#e2e2e2] p-5 rounded-2xl hover:border-[#1a7a5e] hover:shadow-lg transition-all group">
                 <div className="w-10 h-10 bg-[#e8f5f0] text-[#1a7a5e] rounded-xl flex items-center justify-center mb-3 text-lg group-hover:scale-110 transition-transform">📋</div>
                 <h3 className="text-sm font-bold mb-1">Novi 5S Audit</h3>
@@ -107,12 +113,16 @@ export default function DashboardPage() {
               </a>
               <a href="/alati/5-zasto" className="bg-white border border-[#e2e2e2] p-5 rounded-2xl hover:border-[#1a7a5e] hover:shadow-lg transition-all group">
                 <div className="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center mb-3 text-lg group-hover:scale-110 transition-transform">❓</div>
-                <h3 className="text-sm font-bold mb-1">Nova 5x Zašto analiza</h3>
-                <p className="text-xs text-[#5a5a5a]">Pronađite korijenski uzrok problema.</p>
+                <h3 className="text-sm font-bold mb-1">Nova 5x Zašto</h3>
+                <p className="text-xs text-[#5a5a5a]">Pronađite korijenski uzrok.</p>
+              </a>
+              <a href="/alati/oee-kalkulator" className="bg-white border border-[#e2e2e2] p-5 rounded-2xl hover:border-[#1a7a5e] hover:shadow-lg transition-all group">
+                <div className="w-10 h-10 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center mb-3 text-lg group-hover:scale-110 transition-transform">📊</div>
+                <h3 className="text-sm font-bold mb-1">Novi OEE Izračun</h3>
+                <p className="text-xs text-[#5a5a5a]">Učinkovitost opreme i strojeva.</p>
               </a>
             </div>
 
-            {/* Nedavni zapisi */}
             {recentAudits.length > 0 && (
               <div className="bg-white border border-[#e2e2e2] rounded-2xl p-6">
                 <div className="flex justify-between items-center mb-4">
@@ -187,6 +197,26 @@ export default function DashboardPage() {
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-bold text-[#1a1a1a] truncate">{z.odjel || 'Nenavedeni odjel'}</div>
                         <div className="text-xs text-[#9a9a9a]">{z.kategorija} · {z.datum ? new Date(z.datum).toLocaleDateString('hr-HR') : ''}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {recentOEE.length > 0 && (
+              <div className="bg-white border border-[#e2e2e2] rounded-2xl p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="font-bold text-[#1a1a1a]">Nedavni OEE izračuni</h3>
+                  <a href="/povijest" className="text-xs text-[#1a7a5e] font-semibold hover:underline">Svi →</a>
+                </div>
+                <div className="space-y-3">
+                  {recentOEE.map((o) => (
+                    <div key={o.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#fafaf8] transition-all">
+                      <div className="w-10 h-10 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center text-lg">📊</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-bold text-[#1a1a1a] truncate">{o.pogon || 'Nenavedeni pogon'}</div>
+                        <div className="text-xs text-[#9a9a9a]">{o.period || '—'} · {Array.isArray(o.strojevi) ? o.strojevi.length : 0} {Array.isArray(o.strojevi) && o.strojevi.length === 1 ? 'stroj' : 'strojeva'}</div>
                       </div>
                     </div>
                   ))}
