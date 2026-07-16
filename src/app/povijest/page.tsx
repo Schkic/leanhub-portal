@@ -220,7 +220,7 @@ export default function HistoryPage() {
           <div className="space-y-4">
             {oeeIzracuni.length === 0 ? <EmptyState icon="📊" title="Još nemate OEE izračuna" href="/alati/oee-kalkulator" label="Novi OEE Izračun"/> :
               oeeIzracuni.map(o => (
-                <Card key={o.id}>
+                <a key={o.id} href={`/povijest/oee/${o.id}`} className="bg-white border border-[#e2e2e2] rounded-xl p-4 hover:border-[#1a7a5e] hover:shadow-md transition-all flex items-center gap-4 cursor-pointer">
                   <div className="w-12 h-12 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center text-xl shrink-0">📊</div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
@@ -233,7 +233,8 @@ export default function HistoryPage() {
                     </div>
                     <span className="text-xs text-[#9a9a9a]">⚙️ {Array.isArray(o.strojevi) ? o.strojevi.length : 0} strojeva</span>
                   </div>
-                </Card>
+                  <span className="text-xs text-[#9a9a9a] hover:text-[#1a7a5e] shrink-0">→</span>
+                </a>
               ))}
           </div>
         )}
