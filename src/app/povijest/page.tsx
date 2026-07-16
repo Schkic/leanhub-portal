@@ -9,8 +9,9 @@ export default function HistoryPage() {
   const [audits, setAudits] = useState<any[]>([]);
   const [gembaWalks, setGembaWalks] = useState<any[]>([]);
   const [a3Obrasci, setA3Obrasci] = useState<any[]>([]);
+  const [zastoAnalize, setZastoAnalize] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'5s' | 'gemba' | 'a3'>('5s');
+  const [activeTab, setActiveTab] = useState<'5s' | 'gemba' | 'a3' | 'zasto'>('5s');
   const router = useRouter();
 
   useEffect(() => {
@@ -18,23 +19,25 @@ export default function HistoryPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/prijava'); return; }
 
-      const { data: auditData } = await supabase
-        .from('audits_5s')
+      const { data: auditData } = await supabase.from('audits_5s')
         .select('id, created_at, firma, lokacija, total_score, datum')
         .order('created_at', { ascending: false });
       setAudits(auditData || []);
 
-      const { data: gembaData } = await supabase
-        .from('gemba_walk')
+      const { data: gembaData } = await supabase.from('gemba_walk')
         .select('id, created_at, voditelj, lokacija, datum, cilj, zapazanja, akcije')
         .order('created_at', { ascending: false });
       setGembaWalks(gembaData || []);
 
-      const { data: a3Data } = await supabase
-        .from('a3_obrazac')
-        .select('id, created_at, naslov, vlasnik, datum_otvaranja, odjel, cilj_postignut, akcije')
+      const { data: a3Data } = await supabase.from('a3_obrazac')
+        .select('id, created_at, naslov, vlasnik, datum_otvaranja, odjel, cilj_postignut')
         .order('created_at', { ascending: false });
       setA3Obrasci(a3Data || []);
+
+      const { data: zastoData } = await supabase.from('pet_zasto')
+        .select('id, created_at, voditelj, odjel, datum, kategorija, analize')
+        .order('created_at', { ascending: false });
+      setZastoAnalize(zastoData || []);
 
       setIsLoading(false);
     };
@@ -71,17 +74,19 @@ export default function HistoryPage() {
       </div>
 
       <div className="max-w-[900px] mx-auto px-6 mt-6">
-
         {/* Tabovi */}
-        <div className="flex gap-2 mb-6 bg-white border border-[#e2e2e2] rounded-xl p-1 w-fit flex-wrap">
-          <button onClick={() => setActiveTab('5s')} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === '5s' ? 'bg-[#1a7a5e] text-white' : 'text-[#5a5a5a] hover:bg-[#fafaf8]'}`}>
+        <div className="flex gap-2 mb-6 bg-white border border-[#e2e2e2] rounded-xl p-1 flex-wrap">
+          <button onClick={() => setActiveTab('5s')} className={`px-3 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === '5s' ? 'bg-[#1a7a5e] text-white' : 'text-[#5a5a5a] hover:bg-[#fafaf8]'}`}>
             📋 5S Auditi ({audits.length})
           </button>
-          <button onClick={() => setActiveTab('gemba')} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === 'gemba' ? 'bg-[#1a7a5e] text-white' : 'text-[#5a5a5a] hover:bg-[#fafaf8]'}`}>
-            🚶 Gemba Walkovi ({gembaWalks.length})
+          <button onClick={() => setActiveTab('gemba')} className={`px-3 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === 'gemba' ? 'bg-[#1a7a5e] text-white' : 'text-[#5a5a5a] hover:bg-[#fafaf8]'}`}>
+            🚶 Gemba ({gembaWalks.length})
           </button>
-          <button onClick={() => setActiveTab('a3')} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === 'a3' ? 'bg-[#1a7a5e] text-white' : 'text-[#5a5a5a] hover:bg-[#fafaf8]'}`}>
-            📄 A3 Obrasci ({a3Obrasci.length})
+          <button onClick={() => setActiveTab('a3')} className={`px-3 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === 'a3' ? 'bg-[#1a7a5e] text-white' : 'text-[#5a5a5a] hover:bg-[#fafaf8]'}`}>
+            📄 A3 ({a3Obrasci.length})
+          </button>
+          <button onClick={() => setActiveTab('zasto')} className={`px-3 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === 'zasto' ? 'bg-[#1a7a5e] text-white' : 'text-[#5a5a5a] hover:bg-[#fafaf8]'}`}>
+            ❓ 5x Zašto ({zastoAnalize.length})
           </button>
         </div>
 
@@ -97,7 +102,7 @@ export default function HistoryPage() {
               </div>
             ) : (
               <>
-                <p className="text-sm text-[#9a9a9a] uppercase tracking-wider font-semibold">Moji auditi ({audits.length})</p>
+                <p className="text-sm text-[#9a9a9a] uppercase tracking-wider font-semibold mb-2">Moji auditi ({audits.length})</p>
                 {audits.map((audit) => (
                   <a key={audit.id} href={`/povijest/${audit.id}`} className="bg-white border border-[#e2e2e2] rounded-xl p-4 hover:border-[#1a7a5e] hover:shadow-md transition-all block group">
                     <div className="flex items-center gap-4">
@@ -133,7 +138,7 @@ export default function HistoryPage() {
               </div>
             ) : (
               <>
-                <p className="text-sm text-[#9a9a9a] uppercase tracking-wider font-semibold">Moji Gemba Walkovi ({gembaWalks.length})</p>
+                <p className="text-sm text-[#9a9a9a] uppercase tracking-wider font-semibold mb-2">Moji Gemba Walkovi ({gembaWalks.length})</p>
                 {gembaWalks.map((g) => (
                   <div key={g.id} className="bg-white border border-[#e2e2e2] rounded-xl p-4 hover:border-[#1a7a5e] hover:shadow-md transition-all">
                     <div className="flex items-center gap-4">
@@ -172,7 +177,7 @@ export default function HistoryPage() {
               </div>
             ) : (
               <>
-                <p className="text-sm text-[#9a9a9a] uppercase tracking-wider font-semibold">Moji A3 obrasci ({a3Obrasci.length})</p>
+                <p className="text-sm text-[#9a9a9a] uppercase tracking-wider font-semibold mb-2">Moji A3 obrasci ({a3Obrasci.length})</p>
                 {a3Obrasci.map((a) => (
                   <div key={a.id} className="bg-white border border-[#e2e2e2] rounded-xl p-4 hover:border-[#1a7a5e] hover:shadow-md transition-all">
                     <div className="flex items-center gap-4">
@@ -191,6 +196,44 @@ export default function HistoryPage() {
                             <span className={`text-xs font-semibold px-2 py-0.5 rounded ${getCiljColor(a.cilj_postignut)}`}>{a.cilj_postignut}</span>
                           </div>
                         )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* 5x Zašto */}
+        {activeTab === 'zasto' && (
+          <div className="space-y-4">
+            {zastoAnalize.length === 0 ? (
+              <div className="bg-white border border-[#e2e2e2] rounded-2xl p-12 text-center">
+                <div className="text-4xl mb-4">❓</div>
+                <h3 className="text-xl font-bold mb-2">Još nemate spremljenih analiza</h3>
+                <p className="text-[#5a5a5a] mb-6">Pokrenite prvu 5x Zašto analizu i spremite je u portal.</p>
+                <a href="/alati/5-zasto" className="bg-[#1a7a5e] text-white px-6 py-2.5 rounded-xl font-semibold text-sm hover:bg-[#155f49] transition-all">Nova 5x Zašto analiza →</a>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-[#9a9a9a] uppercase tracking-wider font-semibold mb-2">Moje analize ({zastoAnalize.length})</p>
+                {zastoAnalize.map((z) => (
+                  <div key={z.id} className="bg-white border border-[#e2e2e2] rounded-xl p-4 hover:border-[#1a7a5e] hover:shadow-md transition-all">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-lg bg-red-50 text-red-600 flex items-center justify-center text-xl">❓</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="font-bold text-[#1a1a1a] truncate">{z.odjel || 'Nenavedeni odjel'}</span>
+                          <span className="text-[10px] uppercase font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded">5x Zašto</span>
+                        </div>
+                        <div className="flex flex-wrap gap-x-4 gap-y-1">
+                          <span className="text-xs text-[#5a5a5a]">Kategorija: {z.kategorija || '—'}</span>
+                          <span className="flex items-center gap-1.5 text-xs text-[#5a5a5a]"><Calendar size={12} className="text-[#9a9a9a]" />{z.datum ? new Date(z.datum).toLocaleDateString('hr-HR') : '—'}</span>
+                        </div>
+                        <div className="mt-2">
+                          <span className="text-xs text-[#9a9a9a]">🔍 {Array.isArray(z.analize) ? z.analize.length : 0} {Array.isArray(z.analize) && z.analize.length === 1 ? 'analiza' : 'analize'}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
