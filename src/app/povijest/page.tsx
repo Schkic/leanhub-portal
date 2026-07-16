@@ -13,16 +13,17 @@ export default function HistoryPage() {
   const [oeeIzracuni, setOeeIzracuni] = useState<any[]>([]);
   const [kaizenPrijedlozi, setKaizenPrijedlozi] = useState<any[]>([]);
   const [vsmDijagrami, setVsmDijagrami] = useState<any[]>([]);
+  const [ishikawaDijagrami, setIshikawaDijagrami] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<string>('5s');
+  const [activeTab, setActiveTab] = useState('5s');
   const router = useRouter();
 
   useEffect(() => {
-    const fetch = async () => {
+    const fetchAll = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/prijava'); return; }
 
-      const [a, g, a3, z, o, k, v] = await Promise.all([
+      const [a, g, a3, z, o, k, v, ish] = await Promise.all([
         supabase.from('audits_5s').select('id, created_at, firma, lokacija, total_score, datum').order('created_at', { ascending: false }),
         supabase.from('gemba_walk').select('id, created_at, voditelj, lokacija, datum, zapazanja, akcije').order('created_at', { ascending: false }),
         supabase.from('a3_obrazac').select('id, created_at, naslov, vlasnik, datum_otvaranja, odjel, cilj_postignut').order('created_at', { ascending: false }),
@@ -30,6 +31,7 @@ export default function HistoryPage() {
         supabase.from('oee_kalkulator').select('id, created_at, pogon, period, odgovorna_osoba, strojevi').order('created_at', { ascending: false }),
         supabase.from('kaizen_prijedlog').select('id, created_at, ime, odjel, datum, kategorija, prioritet, status, prob_gdje').order('created_at', { ascending: false }),
         supabase.from('vsm_dijagram').select('id, created_at, naziv, elementi, konekcije').order('created_at', { ascending: false }),
+        supabase.from('ishikawa').select('id, created_at, problem, odjel, datum, korijenski_uzrok').order('created_at', { ascending: false }),
       ]);
 
       setAudits(a.data || []);
@@ -39,9 +41,10 @@ export default function HistoryPage() {
       setOeeIzracuni(o.data || []);
       setKaizenPrijedlozi(k.data || []);
       setVsmDijagrami(v.data || []);
+      setIshikawaDijagrami(ish.data || []);
       setIsLoading(false);
     };
-    fetch();
+    fetchAll();
   }, [router]);
 
   const getScoreColor = (score: number) => {
@@ -72,13 +75,14 @@ export default function HistoryPage() {
   );
 
   const tabs = [
-    { key: '5s',    label: '📋 5S',       count: audits.length },
-    { key: 'gemba', label: '🚶 Gemba',     count: gembaWalks.length },
-    { key: 'a3',    label: '📄 A3',        count: a3Obrasci.length },
-    { key: 'zasto', label: '❓ 5x Zašto',  count: zastoAnalize.length },
-    { key: 'oee',   label: '📊 OEE',       count: oeeIzracuni.length },
-    { key: 'kaizen',label: '♾️ Kaizen',    count: kaizenPrijedlozi.length },
-    { key: 'vsm',   label: '🗺️ VSM',       count: vsmDijagrami.length },
+    { key: '5s',       label: '📋 5S',       count: audits.length },
+    { key: 'gemba',    label: '🚶 Gemba',     count: gembaWalks.length },
+    { key: 'a3',       label: '📄 A3',        count: a3Obrasci.length },
+    { key: 'zasto',    label: '❓ 5x Zašto',  count: zastoAnalize.length },
+    { key: 'oee',      label: '📊 OEE',       count: oeeIzracuni.length },
+    { key: 'kaizen',   label: '♾️ Kaizen',    count: kaizenPrijedlozi.length },
+    { key: 'vsm',      label: '🗺️ VSM',       count: vsmDijagrami.length },
+    { key: 'ishikawa', label: '🐟 Ishikawa',  count: ishikawaDijagrami.length },
   ];
 
   const EmptyState = ({ icon, title, href, label }: any) => (
@@ -100,7 +104,6 @@ export default function HistoryPage() {
       </div>
 
       <div className="max-w-[900px] mx-auto px-6 mt-6">
-        {/* Tabovi */}
         <div className="flex gap-1.5 mb-6 bg-white border border-[#e2e2e2] rounded-xl p-1 flex-wrap">
           {tabs.map(tab => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
@@ -110,7 +113,6 @@ export default function HistoryPage() {
           ))}
         </div>
 
-        {/* 5S */}
         {activeTab === '5s' && (
           <div className="space-y-4">
             {audits.length === 0 ? <EmptyState icon="📋" title="Još nemate 5S audita" href="/alati/5s-audit" label="Novi 5S Audit"/> :
@@ -120,7 +122,7 @@ export default function HistoryPage() {
                     <div className={`w-12 h-12 rounded-lg flex items-center justify-center text-lg font-bold ${getScoreColor(audit.total_score)}`}>{audit.total_score}</div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
-                        <span className="font-bold text-[#1a1a1a] truncate">{audit.firma || 'Nenavedena firma'}</span>
+                        <span className="font-bold truncate">{audit.firma || 'Nenavedena firma'}</span>
                         <span className="text-[10px] uppercase font-bold text-[#1a7a5e] bg-[#e8f5f0] px-2 py-0.5 rounded">5S</span>
                       </div>
                       <div className="flex flex-wrap gap-x-4 text-xs text-[#9a9a9a]">
@@ -135,7 +137,6 @@ export default function HistoryPage() {
           </div>
         )}
 
-        {/* Gemba */}
         {activeTab === 'gemba' && (
           <div className="space-y-4">
             {gembaWalks.length === 0 ? <EmptyState icon="🚶" title="Još nemate Gemba Walkova" href="/alati/gemba-walk" label="Novi Gemba Walk"/> :
@@ -145,7 +146,7 @@ export default function HistoryPage() {
                     <div className="w-12 h-12 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xl">🚶</div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
-                        <span className="font-bold text-[#1a1a1a] truncate">{g.lokacija || 'Nenavedena lokacija'}</span>
+                        <span className="font-bold truncate">{g.lokacija || 'Nenavedena lokacija'}</span>
                         <span className="text-[10px] uppercase font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">Gemba</span>
                       </div>
                       <div className="flex flex-wrap gap-x-4 text-xs text-[#9a9a9a]">
@@ -163,7 +164,6 @@ export default function HistoryPage() {
           </div>
         )}
 
-        {/* A3 */}
         {activeTab === 'a3' && (
           <div className="space-y-4">
             {a3Obrasci.length === 0 ? <EmptyState icon="📄" title="Još nemate A3 obrazaca" href="/alati/a3-obrazac" label="Novi A3 Obrazac"/> :
@@ -173,7 +173,7 @@ export default function HistoryPage() {
                     <div className="w-12 h-12 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center text-xl">📄</div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
-                        <span className="font-bold text-[#1a1a1a] truncate">{a.naslov || 'Bez naslova'}</span>
+                        <span className="font-bold truncate">{a.naslov || 'Bez naslova'}</span>
                         <span className="text-[10px] uppercase font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded">A3</span>
                       </div>
                       <div className="flex flex-wrap gap-x-4 text-xs text-[#9a9a9a]">
@@ -188,7 +188,6 @@ export default function HistoryPage() {
           </div>
         )}
 
-        {/* 5x Zašto */}
         {activeTab === 'zasto' && (
           <div className="space-y-4">
             {zastoAnalize.length === 0 ? <EmptyState icon="❓" title="Još nemate 5x Zašto analiza" href="/alati/5-zasto" label="Nova analiza"/> :
@@ -198,7 +197,7 @@ export default function HistoryPage() {
                     <div className="w-12 h-12 rounded-lg bg-red-50 text-red-600 flex items-center justify-center text-xl">❓</div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
-                        <span className="font-bold text-[#1a1a1a] truncate">{z.odjel || 'Nenavedeni odjel'}</span>
+                        <span className="font-bold truncate">{z.odjel || 'Nenavedeni odjel'}</span>
                         <span className="text-[10px] uppercase font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded">5x Zašto</span>
                       </div>
                       <div className="flex flex-wrap gap-x-4 text-xs text-[#9a9a9a]">
@@ -213,7 +212,6 @@ export default function HistoryPage() {
           </div>
         )}
 
-        {/* OEE */}
         {activeTab === 'oee' && (
           <div className="space-y-4">
             {oeeIzracuni.length === 0 ? <EmptyState icon="📊" title="Još nemate OEE izračuna" href="/alati/oee-kalkulator" label="Novi OEE Izračun"/> :
@@ -223,7 +221,7 @@ export default function HistoryPage() {
                     <div className="w-12 h-12 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center text-xl">📊</div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
-                        <span className="font-bold text-[#1a1a1a] truncate">{o.pogon || 'Nenavedeni pogon'}</span>
+                        <span className="font-bold truncate">{o.pogon || 'Nenavedeni pogon'}</span>
                         <span className="text-[10px] uppercase font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded">OEE</span>
                       </div>
                       <div className="flex flex-wrap gap-x-4 text-xs text-[#9a9a9a]">
@@ -238,7 +236,6 @@ export default function HistoryPage() {
           </div>
         )}
 
-        {/* Kaizen */}
         {activeTab === 'kaizen' && (
           <div className="space-y-4">
             {kaizenPrijedlozi.length === 0 ? <EmptyState icon="♾️" title="Još nemate Kaizen prijedloga" href="/alati/kaizen-prijedlog" label="Novi Kaizen Prijedlog"/> :
@@ -248,7 +245,7 @@ export default function HistoryPage() {
                     <div className="w-12 h-12 rounded-lg bg-[#e8f5f0] text-[#1a7a5e] flex items-center justify-center text-xl">♾️</div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
-                        <span className="font-bold text-[#1a1a1a] truncate">{k.prob_gdje || k.odjel || 'Bez opisa'}</span>
+                        <span className="font-bold truncate">{k.prob_gdje || k.odjel || 'Bez opisa'}</span>
                         <span className="text-[10px] uppercase font-bold text-[#1a7a5e] bg-[#e8f5f0] px-2 py-0.5 rounded">Kaizen</span>
                       </div>
                       <div className="flex flex-wrap gap-x-4 text-xs text-[#9a9a9a]">
@@ -264,7 +261,6 @@ export default function HistoryPage() {
           </div>
         )}
 
-        {/* VSM */}
         {activeTab === 'vsm' && (
           <div className="space-y-4">
             {vsmDijagrami.length === 0 ? <EmptyState icon="🗺️" title="Još nemate VSM dijagrama" href="/alati/vsm-builder" label="Novi VSM Dijagram"/> :
@@ -274,7 +270,7 @@ export default function HistoryPage() {
                     <div className="w-12 h-12 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center text-xl">🗺️</div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
-                        <span className="font-bold text-[#1a1a1a] truncate">{v.naziv || 'Bez naziva'}</span>
+                        <span className="font-bold truncate">{v.naziv || 'Bez naziva'}</span>
                         <span className="text-[10px] uppercase font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">VSM</span>
                       </div>
                       <div className="flex gap-3 text-xs text-[#9a9a9a]">
@@ -282,6 +278,32 @@ export default function HistoryPage() {
                         <span>🔗 {Array.isArray(v.konekcije) ? v.konekcije.length : 0} konekcija</span>
                         <span>{new Date(v.created_at).toLocaleDateString('hr-HR')}</span>
                       </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+          </div>
+        )}
+
+        {activeTab === 'ishikawa' && (
+          <div className="space-y-4">
+            {ishikawaDijagrami.length === 0 ? <EmptyState icon="🐟" title="Još nemate Ishikawa dijagrama" href="/alati/ishikawa" label="Novi Ishikawa dijagram"/> :
+              ishikawaDijagrami.map(ish => (
+                <div key={ish.id} className="bg-white border border-[#e2e2e2] rounded-xl p-4 hover:border-[#1a7a5e] hover:shadow-md transition-all">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-lg bg-red-50 text-red-600 flex items-center justify-center text-xl">🐟</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="font-bold truncate">{ish.problem || 'Bez opisa problema'}</span>
+                        <span className="text-[10px] uppercase font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded">Ishikawa</span>
+                      </div>
+                      <div className="flex flex-wrap gap-x-4 text-xs text-[#9a9a9a]">
+                        <span>{ish.odjel || '—'}</span>
+                        <span>{ish.datum ? new Date(ish.datum).toLocaleDateString('hr-HR') : '—'}</span>
+                      </div>
+                      {ish.korijenski_uzrok && (
+                        <p className="text-xs text-[#5a5a5a] mt-1 truncate">✅ {ish.korijenski_uzrok}</p>
+                      )}
                     </div>
                   </div>
                 </div>
