@@ -14,6 +14,7 @@ export default function HistoryPage() {
   const [kaizenPrijedlozi, setKaizenPrijedlozi] = useState<any[]>([]);
   const [vsmDijagrami, setVsmDijagrami] = useState<any[]>([]);
   const [ishikawaDijagrami, setIshikawaDijagrami] = useState<any[]>([]);
+  const [smedAnalize, setSmedAnalize] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('5s');
   const router = useRouter();
@@ -23,7 +24,7 @@ export default function HistoryPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/prijava'); return; }
 
-      const [a, g, a3, z, o, k, v, ish] = await Promise.all([
+      const [a, g, a3, z, o, k, v, ish, smed] = await Promise.all([
         supabase.from('audits_5s').select('id, created_at, firma, lokacija, total_score, datum').order('created_at', { ascending: false }),
         supabase.from('gemba_walk').select('id, created_at, voditelj, lokacija, datum, zapazanja, akcije').order('created_at', { ascending: false }),
         supabase.from('a3_obrazac').select('id, created_at, naslov, vlasnik, datum_otvaranja, odjel, cilj_postignut').order('created_at', { ascending: false }),
@@ -32,6 +33,7 @@ export default function HistoryPage() {
         supabase.from('kaizen_prijedlog').select('id, created_at, ime, odjel, datum, kategorija, prioritet, status, prob_gdje').order('created_at', { ascending: false }),
         supabase.from('vsm_dijagram').select('id, created_at, naziv, elementi, konekcije').order('created_at', { ascending: false }),
         supabase.from('ishikawa').select('id, created_at, problem, odjel, datum, korijenski_uzrok').order('created_at', { ascending: false }),
+        supabase.from('smed').select('id, created_at, stroj, proces, datum, aktivnosti').order('created_at', { ascending: false }),
       ]);
 
       setAudits(a.data || []);
@@ -42,6 +44,7 @@ export default function HistoryPage() {
       setKaizenPrijedlozi(k.data || []);
       setVsmDijagrami(v.data || []);
       setIshikawaDijagrami(ish.data || []);
+      setSmedAnalize(smed.data || []);
       setIsLoading(false);
     };
     fetchAll();
@@ -83,6 +86,7 @@ export default function HistoryPage() {
     { key: 'kaizen',   label: '♾️ Kaizen',    count: kaizenPrijedlozi.length },
     { key: 'vsm',      label: '🗺️ VSM',       count: vsmDijagrami.length },
     { key: 'ishikawa', label: '🐟 Ishikawa',  count: ishikawaDijagrami.length },
+    { key: 'smed',     label: '⚡ SMED',      count: smedAnalize.length },
   ];
 
   const EmptyState = ({ icon, title, href, label }: any) => (
@@ -90,6 +94,12 @@ export default function HistoryPage() {
       <div className="text-4xl mb-4">{icon}</div>
       <h3 className="text-xl font-bold mb-2">{title}</h3>
       <a href={href} className="bg-[#1a7a5e] text-white px-6 py-2.5 rounded-xl font-semibold text-sm hover:bg-[#155f49] transition-all inline-block mt-4">{label} →</a>
+    </div>
+  );
+
+  const Card = ({ children }: any) => (
+    <div className="bg-white border border-[#e2e2e2] rounded-xl p-4 hover:border-[#1a7a5e] hover:shadow-md transition-all">
+      <div className="flex items-center gap-4">{children}</div>
     </div>
   );
 
@@ -141,25 +151,23 @@ export default function HistoryPage() {
           <div className="space-y-4">
             {gembaWalks.length === 0 ? <EmptyState icon="🚶" title="Još nemate Gemba Walkova" href="/alati/gemba-walk" label="Novi Gemba Walk"/> :
               gembaWalks.map(g => (
-                <div key={g.id} className="bg-white border border-[#e2e2e2] rounded-xl p-4 hover:border-[#1a7a5e] hover:shadow-md transition-all">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xl">🚶</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="font-bold truncate">{g.lokacija || 'Nenavedena lokacija'}</span>
-                        <span className="text-[10px] uppercase font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">Gemba</span>
-                      </div>
-                      <div className="flex flex-wrap gap-x-4 text-xs text-[#9a9a9a]">
-                        <span>{g.voditelj || '—'}</span>
-                        <span>{g.datum ? new Date(g.datum).toLocaleDateString('hr-HR') : '—'}</span>
-                      </div>
-                      <div className="flex gap-3 mt-1 text-xs text-[#9a9a9a]">
-                        <span>📍 {Array.isArray(g.zapazanja) ? g.zapazanja.length : 0} zapažanja</span>
-                        <span>🎯 {Array.isArray(g.akcije) ? g.akcije.length : 0} akcija</span>
-                      </div>
+                <Card key={g.id}>
+                  <div className="w-12 h-12 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xl shrink-0">🚶</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="font-bold truncate">{g.lokacija || 'Nenavedena lokacija'}</span>
+                      <span className="text-[10px] uppercase font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">Gemba</span>
+                    </div>
+                    <div className="flex flex-wrap gap-x-4 text-xs text-[#9a9a9a]">
+                      <span>{g.voditelj || '—'}</span>
+                      <span>{g.datum ? new Date(g.datum).toLocaleDateString('hr-HR') : '—'}</span>
+                    </div>
+                    <div className="flex gap-3 mt-1 text-xs text-[#9a9a9a]">
+                      <span>📍 {Array.isArray(g.zapazanja) ? g.zapazanja.length : 0} zapažanja</span>
+                      <span>🎯 {Array.isArray(g.akcije) ? g.akcije.length : 0} akcija</span>
                     </div>
                   </div>
-                </div>
+                </Card>
               ))}
           </div>
         )}
@@ -168,22 +176,20 @@ export default function HistoryPage() {
           <div className="space-y-4">
             {a3Obrasci.length === 0 ? <EmptyState icon="📄" title="Još nemate A3 obrazaca" href="/alati/a3-obrazac" label="Novi A3 Obrazac"/> :
               a3Obrasci.map(a => (
-                <div key={a.id} className="bg-white border border-[#e2e2e2] rounded-xl p-4 hover:border-[#1a7a5e] hover:shadow-md transition-all">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center text-xl">📄</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="font-bold truncate">{a.naslov || 'Bez naslova'}</span>
-                        <span className="text-[10px] uppercase font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded">A3</span>
-                      </div>
-                      <div className="flex flex-wrap gap-x-4 text-xs text-[#9a9a9a]">
-                        <span>{a.vlasnik || '—'}</span>
-                        <span>{a.datum_otvaranja ? new Date(a.datum_otvaranja).toLocaleDateString('hr-HR') : '—'}</span>
-                      </div>
-                      {a.cilj_postignut && <span className={`text-xs font-semibold px-2 py-0.5 rounded mt-1 inline-block ${getCiljColor(a.cilj_postignut)}`}>{a.cilj_postignut}</span>}
+                <Card key={a.id}>
+                  <div className="w-12 h-12 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center text-xl shrink-0">📄</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="font-bold truncate">{a.naslov || 'Bez naslova'}</span>
+                      <span className="text-[10px] uppercase font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded">A3</span>
                     </div>
+                    <div className="flex flex-wrap gap-x-4 text-xs text-[#9a9a9a]">
+                      <span>{a.vlasnik || '—'}</span>
+                      <span>{a.datum_otvaranja ? new Date(a.datum_otvaranja).toLocaleDateString('hr-HR') : '—'}</span>
+                    </div>
+                    {a.cilj_postignut && <span className={`text-xs font-semibold px-2 py-0.5 rounded mt-1 inline-block ${getCiljColor(a.cilj_postignut)}`}>{a.cilj_postignut}</span>}
                   </div>
-                </div>
+                </Card>
               ))}
           </div>
         )}
@@ -192,22 +198,20 @@ export default function HistoryPage() {
           <div className="space-y-4">
             {zastoAnalize.length === 0 ? <EmptyState icon="❓" title="Još nemate 5x Zašto analiza" href="/alati/5-zasto" label="Nova analiza"/> :
               zastoAnalize.map(z => (
-                <div key={z.id} className="bg-white border border-[#e2e2e2] rounded-xl p-4 hover:border-[#1a7a5e] hover:shadow-md transition-all">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-lg bg-red-50 text-red-600 flex items-center justify-center text-xl">❓</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="font-bold truncate">{z.odjel || 'Nenavedeni odjel'}</span>
-                        <span className="text-[10px] uppercase font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded">5x Zašto</span>
-                      </div>
-                      <div className="flex flex-wrap gap-x-4 text-xs text-[#9a9a9a]">
-                        <span>{z.kategorija || '—'}</span>
-                        <span>{z.datum ? new Date(z.datum).toLocaleDateString('hr-HR') : '—'}</span>
-                      </div>
-                      <span className="text-xs text-[#9a9a9a]">🔍 {Array.isArray(z.analize) ? z.analize.length : 0} analiza</span>
+                <Card key={z.id}>
+                  <div className="w-12 h-12 rounded-lg bg-red-50 text-red-600 flex items-center justify-center text-xl shrink-0">❓</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="font-bold truncate">{z.odjel || 'Nenavedeni odjel'}</span>
+                      <span className="text-[10px] uppercase font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded">5x Zašto</span>
                     </div>
+                    <div className="flex flex-wrap gap-x-4 text-xs text-[#9a9a9a]">
+                      <span>{z.kategorija || '—'}</span>
+                      <span>{z.datum ? new Date(z.datum).toLocaleDateString('hr-HR') : '—'}</span>
+                    </div>
+                    <span className="text-xs text-[#9a9a9a]">🔍 {Array.isArray(z.analize) ? z.analize.length : 0} analiza</span>
                   </div>
-                </div>
+                </Card>
               ))}
           </div>
         )}
@@ -216,22 +220,20 @@ export default function HistoryPage() {
           <div className="space-y-4">
             {oeeIzracuni.length === 0 ? <EmptyState icon="📊" title="Još nemate OEE izračuna" href="/alati/oee-kalkulator" label="Novi OEE Izračun"/> :
               oeeIzracuni.map(o => (
-                <div key={o.id} className="bg-white border border-[#e2e2e2] rounded-xl p-4 hover:border-[#1a7a5e] hover:shadow-md transition-all">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center text-xl">📊</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="font-bold truncate">{o.pogon || 'Nenavedeni pogon'}</span>
-                        <span className="text-[10px] uppercase font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded">OEE</span>
-                      </div>
-                      <div className="flex flex-wrap gap-x-4 text-xs text-[#9a9a9a]">
-                        <span>{o.period || '—'}</span>
-                        <span>{o.odgovorna_osoba || '—'}</span>
-                      </div>
-                      <span className="text-xs text-[#9a9a9a]">⚙️ {Array.isArray(o.strojevi) ? o.strojevi.length : 0} strojeva</span>
+                <Card key={o.id}>
+                  <div className="w-12 h-12 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center text-xl shrink-0">📊</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="font-bold truncate">{o.pogon || 'Nenavedeni pogon'}</span>
+                      <span className="text-[10px] uppercase font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded">OEE</span>
                     </div>
+                    <div className="flex flex-wrap gap-x-4 text-xs text-[#9a9a9a]">
+                      <span>{o.period || '—'}</span>
+                      <span>{o.odgovorna_osoba || '—'}</span>
+                    </div>
+                    <span className="text-xs text-[#9a9a9a]">⚙️ {Array.isArray(o.strojevi) ? o.strojevi.length : 0} strojeva</span>
                   </div>
-                </div>
+                </Card>
               ))}
           </div>
         )}
@@ -240,23 +242,21 @@ export default function HistoryPage() {
           <div className="space-y-4">
             {kaizenPrijedlozi.length === 0 ? <EmptyState icon="♾️" title="Još nemate Kaizen prijedloga" href="/alati/kaizen-prijedlog" label="Novi Kaizen Prijedlog"/> :
               kaizenPrijedlozi.map(k => (
-                <div key={k.id} className="bg-white border border-[#e2e2e2] rounded-xl p-4 hover:border-[#1a7a5e] hover:shadow-md transition-all">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-lg bg-[#e8f5f0] text-[#1a7a5e] flex items-center justify-center text-xl">♾️</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="font-bold truncate">{k.prob_gdje || k.odjel || 'Bez opisa'}</span>
-                        <span className="text-[10px] uppercase font-bold text-[#1a7a5e] bg-[#e8f5f0] px-2 py-0.5 rounded">Kaizen</span>
-                      </div>
-                      <div className="flex flex-wrap gap-x-4 text-xs text-[#9a9a9a]">
-                        <span>{k.kategorija || '—'}</span>
-                        <span>{k.prioritet || '—'}</span>
-                        <span>{k.datum ? new Date(k.datum).toLocaleDateString('hr-HR') : '—'}</span>
-                      </div>
-                      {k.status && <span className={`text-xs font-semibold px-2 py-0.5 rounded mt-1 inline-block ${getStatusColor(k.status)}`}>{k.status}</span>}
+                <Card key={k.id}>
+                  <div className="w-12 h-12 rounded-lg bg-[#e8f5f0] text-[#1a7a5e] flex items-center justify-center text-xl shrink-0">♾️</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="font-bold truncate">{k.prob_gdje || k.odjel || 'Bez opisa'}</span>
+                      <span className="text-[10px] uppercase font-bold text-[#1a7a5e] bg-[#e8f5f0] px-2 py-0.5 rounded">Kaizen</span>
                     </div>
+                    <div className="flex flex-wrap gap-x-4 text-xs text-[#9a9a9a]">
+                      <span>{k.kategorija || '—'}</span>
+                      <span>{k.prioritet || '—'}</span>
+                      <span>{k.datum ? new Date(k.datum).toLocaleDateString('hr-HR') : '—'}</span>
+                    </div>
+                    {k.status && <span className={`text-xs font-semibold px-2 py-0.5 rounded mt-1 inline-block ${getStatusColor(k.status)}`}>{k.status}</span>}
                   </div>
-                </div>
+                </Card>
               ))}
           </div>
         )}
@@ -265,22 +265,20 @@ export default function HistoryPage() {
           <div className="space-y-4">
             {vsmDijagrami.length === 0 ? <EmptyState icon="🗺️" title="Još nemate VSM dijagrama" href="/alati/vsm-builder" label="Novi VSM Dijagram"/> :
               vsmDijagrami.map(v => (
-                <div key={v.id} className="bg-white border border-[#e2e2e2] rounded-xl p-4 hover:border-[#1a7a5e] hover:shadow-md transition-all">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center text-xl">🗺️</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="font-bold truncate">{v.naziv || 'Bez naziva'}</span>
-                        <span className="text-[10px] uppercase font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">VSM</span>
-                      </div>
-                      <div className="flex gap-3 text-xs text-[#9a9a9a]">
-                        <span>🔷 {Array.isArray(v.elementi) ? v.elementi.length : 0} elemenata</span>
-                        <span>🔗 {Array.isArray(v.konekcije) ? v.konekcije.length : 0} konekcija</span>
-                        <span>{new Date(v.created_at).toLocaleDateString('hr-HR')}</span>
-                      </div>
+                <Card key={v.id}>
+                  <div className="w-12 h-12 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center text-xl shrink-0">🗺️</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="font-bold truncate">{v.naziv || 'Bez naziva'}</span>
+                      <span className="text-[10px] uppercase font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">VSM</span>
+                    </div>
+                    <div className="flex gap-3 text-xs text-[#9a9a9a]">
+                      <span>🔷 {Array.isArray(v.elementi) ? v.elementi.length : 0} elemenata</span>
+                      <span>🔗 {Array.isArray(v.konekcije) ? v.konekcije.length : 0} konekcija</span>
+                      <span>{new Date(v.created_at).toLocaleDateString('hr-HR')}</span>
                     </div>
                   </div>
-                </div>
+                </Card>
               ))}
           </div>
         )}
@@ -289,24 +287,42 @@ export default function HistoryPage() {
           <div className="space-y-4">
             {ishikawaDijagrami.length === 0 ? <EmptyState icon="🐟" title="Još nemate Ishikawa dijagrama" href="/alati/ishikawa" label="Novi Ishikawa dijagram"/> :
               ishikawaDijagrami.map(ish => (
-                <div key={ish.id} className="bg-white border border-[#e2e2e2] rounded-xl p-4 hover:border-[#1a7a5e] hover:shadow-md transition-all">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-lg bg-red-50 text-red-600 flex items-center justify-center text-xl">🐟</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="font-bold truncate">{ish.problem || 'Bez opisa problema'}</span>
-                        <span className="text-[10px] uppercase font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded">Ishikawa</span>
-                      </div>
-                      <div className="flex flex-wrap gap-x-4 text-xs text-[#9a9a9a]">
-                        <span>{ish.odjel || '—'}</span>
-                        <span>{ish.datum ? new Date(ish.datum).toLocaleDateString('hr-HR') : '—'}</span>
-                      </div>
-                      {ish.korijenski_uzrok && (
-                        <p className="text-xs text-[#5a5a5a] mt-1 truncate">✅ {ish.korijenski_uzrok}</p>
-                      )}
+                <Card key={ish.id}>
+                  <div className="w-12 h-12 rounded-lg bg-red-50 text-red-600 flex items-center justify-center text-xl shrink-0">🐟</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="font-bold truncate">{ish.problem || 'Bez opisa problema'}</span>
+                      <span className="text-[10px] uppercase font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded">Ishikawa</span>
                     </div>
+                    <div className="flex flex-wrap gap-x-4 text-xs text-[#9a9a9a]">
+                      <span>{ish.odjel || '—'}</span>
+                      <span>{ish.datum ? new Date(ish.datum).toLocaleDateString('hr-HR') : '—'}</span>
+                    </div>
+                    {ish.korijenski_uzrok && <p className="text-xs text-[#5a5a5a] mt-1 truncate">✅ {ish.korijenski_uzrok}</p>}
                   </div>
-                </div>
+                </Card>
+              ))}
+          </div>
+        )}
+
+        {activeTab === 'smed' && (
+          <div className="space-y-4">
+            {smedAnalize.length === 0 ? <EmptyState icon="⚡" title="Još nemate SMED analiza" href="/alati/smed" label="Nova SMED analiza"/> :
+              smedAnalize.map(s => (
+                <Card key={s.id}>
+                  <div className="w-12 h-12 rounded-lg bg-yellow-50 text-yellow-600 flex items-center justify-center text-xl shrink-0">⚡</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="font-bold truncate">{s.stroj || 'Nenavedeni stroj'}</span>
+                      <span className="text-[10px] uppercase font-bold text-yellow-600 bg-yellow-50 px-2 py-0.5 rounded">SMED</span>
+                    </div>
+                    <div className="flex flex-wrap gap-x-4 text-xs text-[#9a9a9a]">
+                      <span>{s.proces || '—'}</span>
+                      <span>{s.datum ? new Date(s.datum).toLocaleDateString('hr-HR') : '—'}</span>
+                    </div>
+                    <span className="text-xs text-[#9a9a9a]">⚡ {Array.isArray(s.aktivnosti) ? s.aktivnosti.length : 0} aktivnosti</span>
+                  </div>
+                </Card>
               ))}
           </div>
         )}
