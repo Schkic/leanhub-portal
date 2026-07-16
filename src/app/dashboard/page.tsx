@@ -16,6 +16,7 @@ export default function DashboardPage() {
   const [recentKaizen, setRecentKaizen] = useState<any[]>([]);
   const [recentVSM, setRecentVSM] = useState<any[]>([]);
   const [recentIshikawa, setRecentIshikawa] = useState<any[]>([]);
+  const [recentSMED, setRecentSMED] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -29,7 +30,7 @@ export default function DashboardPage() {
         .from('profiles').select('*').eq('id', user.id).single();
       setProfile(profileData);
 
-      const [a, g, a3, z, o, k, v, ish] = await Promise.all([
+      const [a, g, a3, z, o, k, v, ish, smed] = await Promise.all([
         supabase.from('audits_5s').select('id, created_at, firma, lokacija, total_score, datum').order('created_at', { ascending: false }).limit(2),
         supabase.from('gemba_walk').select('id, created_at, voditelj, lokacija, datum').order('created_at', { ascending: false }).limit(2),
         supabase.from('a3_obrazac').select('id, created_at, naslov, vlasnik, datum_otvaranja, odjel').order('created_at', { ascending: false }).limit(2),
@@ -38,6 +39,7 @@ export default function DashboardPage() {
         supabase.from('kaizen_prijedlog').select('id, created_at, odjel, datum, kategorija, prioritet, status').order('created_at', { ascending: false }).limit(2),
         supabase.from('vsm_dijagram').select('id, created_at, naziv, elementi').order('created_at', { ascending: false }).limit(2),
         supabase.from('ishikawa').select('id, created_at, problem, odjel, datum').order('created_at', { ascending: false }).limit(2),
+        supabase.from('smed').select('id, created_at, stroj, proces, datum, aktivnosti').order('created_at', { ascending: false }).limit(2),
       ]);
 
       setRecentAudits(a.data || []);
@@ -48,6 +50,7 @@ export default function DashboardPage() {
       setRecentKaizen(k.data || []);
       setRecentVSM(v.data || []);
       setRecentIshikawa(ish.data || []);
+      setRecentSMED(smed.data || []);
       setLoading(false);
     };
     getData();
@@ -78,14 +81,15 @@ export default function DashboardPage() {
   const isPro = profile?.is_pro;
 
   const alati = [
-    { href: '/alati/5s-audit',       icon: '📋', label: 'Novi 5S Audit',        opis: 'Provjera čistoće i organizacije.',     bg: 'bg-[#e8f5f0] text-[#1a7a5e]' },
-    { href: '/alati/gemba-walk',      icon: '🚶', label: 'Novi Gemba Walk',       opis: 'Zapažanja i akcijski plan.',           bg: 'bg-blue-50 text-blue-600' },
-    { href: '/alati/a3-obrazac',      icon: '📄', label: 'Novi A3 Obrazac',       opis: 'Strukturirano rješavanje problema.',   bg: 'bg-orange-50 text-orange-600' },
-    { href: '/alati/5-zasto',         icon: '❓', label: 'Nova 5x Zašto',         opis: 'Pronađite korijenski uzrok.',          bg: 'bg-red-50 text-red-600' },
-    { href: '/alati/oee-kalkulator',  icon: '📊', label: 'Novi OEE Izračun',      opis: 'Učinkovitost opreme i strojeva.',      bg: 'bg-purple-50 text-purple-600' },
-    { href: '/alati/kaizen-prijedlog',icon: '♾️', label: 'Novi Kaizen Prijedlog', opis: 'Predložite poboljšanje procesa.',      bg: 'bg-[#e8f5f0] text-[#1a7a5e]' },
-    { href: '/alati/vsm-builder',     icon: '🗺️', label: 'Novi VSM Dijagram',     opis: 'Mapiranje toka vrijednosti.',          bg: 'bg-blue-50 text-blue-700' },
-    { href: '/alati/ishikawa',        icon: '🐟', label: 'Novi Ishikawa',         opis: 'Dijagram uzroka i posljedica.',        bg: 'bg-red-50 text-red-600' },
+    { href: '/alati/5s-audit',        icon: '📋', label: 'Novi 5S Audit',        opis: 'Provjera čistoće i organizacije.',    bg: 'bg-[#e8f5f0] text-[#1a7a5e]' },
+    { href: '/alati/gemba-walk',       icon: '🚶', label: 'Novi Gemba Walk',       opis: 'Zapažanja i akcijski plan.',          bg: 'bg-blue-50 text-blue-600' },
+    { href: '/alati/a3-obrazac',       icon: '📄', label: 'Novi A3 Obrazac',       opis: 'Strukturirano rješavanje problema.',  bg: 'bg-orange-50 text-orange-600' },
+    { href: '/alati/5-zasto',          icon: '❓', label: 'Nova 5x Zašto',         opis: 'Pronađite korijenski uzrok.',         bg: 'bg-red-50 text-red-600' },
+    { href: '/alati/oee-kalkulator',   icon: '📊', label: 'Novi OEE Izračun',      opis: 'Učinkovitost opreme i strojeva.',     bg: 'bg-purple-50 text-purple-600' },
+    { href: '/alati/kaizen-prijedlog', icon: '♾️', label: 'Novi Kaizen Prijedlog', opis: 'Predložite poboljšanje procesa.',     bg: 'bg-[#e8f5f0] text-[#1a7a5e]' },
+    { href: '/alati/vsm-builder',      icon: '🗺️', label: 'Novi VSM Dijagram',     opis: 'Mapiranje toka vrijednosti.',         bg: 'bg-blue-50 text-blue-700' },
+    { href: '/alati/ishikawa',         icon: '🐟', label: 'Novi Ishikawa',         opis: 'Dijagram uzroka i posljedica.',       bg: 'bg-red-50 text-red-600' },
+    { href: '/alati/smed',             icon: '⚡', label: 'Nova SMED analiza',     opis: 'Smanjite vrijeme izmjene alata.',     bg: 'bg-yellow-50 text-yellow-600' },
   ];
 
   const recentSections = [
@@ -162,6 +166,15 @@ export default function DashboardPage() {
         </div>
       </div>
     )},
+    { data: recentSMED, title: 'Nedavne SMED analize', render: (s: any) => (
+      <div key={s.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#fafaf8] transition-all">
+        <div className="w-10 h-10 rounded-lg bg-yellow-50 text-yellow-600 flex items-center justify-center text-lg">⚡</div>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-bold truncate">{s.stroj || 'Nenavedeni stroj'}</div>
+          <div className="text-xs text-[#9a9a9a]">{s.proces || '—'} · {s.datum ? new Date(s.datum).toLocaleDateString('hr-HR') : ''} · {Array.isArray(s.aktivnosti) ? s.aktivnosti.length : 0} aktivnosti</div>
+        </div>
+      </div>
+    )},
   ];
 
   return (
@@ -176,7 +189,7 @@ export default function DashboardPage() {
 
         <div className="grid md:grid-cols-3 gap-6">
           <div className="md:col-span-2 space-y-6">
-            <div className="grid sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               {alati.map(a => (
                 <a key={a.href} href={a.href} className="bg-white border border-[#e2e2e2] p-4 rounded-2xl hover:border-[#1a7a5e] hover:shadow-lg transition-all group">
                   <div className={`w-10 h-10 ${a.bg} rounded-xl flex items-center justify-center mb-3 text-lg group-hover:scale-110 transition-transform`}>{a.icon}</div>
