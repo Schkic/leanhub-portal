@@ -3,39 +3,44 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import { LogOut, User } from 'lucide-react';
+import { User } from 'lucide-react';
 
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
+  const [recentAudits, setRecentAudits] = useState<any[]>([]);
+  const [recentGemba, setRecentGemba] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
     const getData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.push('/prijava');
-        return;
-      }
+      if (!user) { router.push('/prijava'); return; }
       setUser(user);
 
       const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
+        .from('profiles').select('*').eq('id', user.id).single();
       setProfile(profileData);
+
+      const { data: audits } = await supabase
+        .from('audits_5s')
+        .select('id, created_at, firma, lokacija, total_score, datum')
+        .order('created_at', { ascending: false })
+        .limit(2);
+      setRecentAudits(audits || []);
+
+      const { data: gemba } = await supabase
+        .from('gemba_walk')
+        .select('id, created_at, voditelj, lokacija, datum, cilj')
+        .order('created_at', { ascending: false })
+        .limit(2);
+      setRecentGemba(gemba || []);
+
       setLoading(false);
     };
     getData();
   }, [router]);
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push('/');
-    router.refresh();
-  };
 
   const handleUpgrade = async () => {
     const res = await fetch('/api/stripe/checkout', {
@@ -45,6 +50,12 @@ export default function DashboardPage() {
     });
     const data = await res.json();
     if (data.url) window.location.href = data.url;
+  };
+
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return 'bg-[#dcfce7] text-[#16a34a]';
+    if (score >= 60) return 'bg-[#fef9c3] text-[#ca8a04]';
+    return 'bg-[#fee2e2] text-[#dc2626]';
   };
 
   if (loading) return (
@@ -59,7 +70,6 @@ export default function DashboardPage() {
     <div className="bg-[#fafaf8] min-h-screen">
       <div className="max-w-[1100px] mx-auto px-6 py-12">
 
-        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
           <div>
             <h1 className="font-serif text-4xl text-[#1a1a1a] mb-2">
@@ -70,22 +80,70 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid md:grid-cols-3 gap-6">
-          {/* Alati */}
-          <div className="md:col-span-2 grid sm:grid-cols-2 gap-6">
-            <a href="/alati/5s-audit" className="bg-white border border-[#e2e2e2] p-8 rounded-2xl hover:border-[#1a7a5e] hover:shadow-lg transition-all group">
-              <div className="w-12 h-12 bg-[#e8f5f0] text-[#1a7a5e] rounded-xl flex items-center justify-center mb-6 text-xl group-hover:scale-110 transition-transform">📋</div>
-              <h3 className="text-xl font-bold mb-2">Novi 5S Audit</h3>
-              <p className="text-sm text-[#5a5a5a]">Provedite novu provjeru čistoće i organizacije radnog mjesta.</p>
-            </a>
-            <a href="/povijest" className="bg-white border border-[#e2e2e2] p-8 rounded-2xl hover:border-[#1a7a5e] hover:shadow-lg transition-all group">
-              <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-6 text-xl group-hover:scale-110 transition-transform">📊</div>
-              <h3 className="text-xl font-bold mb-2">Pregled povijesti</h3>
-              <p className="text-sm text-[#5a5a5a]">Vratite se na stare audite i pratite napredak kroz vrijeme.</p>
-            </a>
+          <div className="md:col-span-2 space-y-6">
+
+            {/* Alati */}
+            <div className="grid sm:grid-cols-2 gap-4">
+              <a href="/alati/5s-audit" className="bg-white border border-[#e2e2e2] p-6 rounded-2xl hover:border-[#1a7a5e] hover:shadow-lg transition-all group">
+                <div className="w-12 h-12 bg-[#e8f5f0] text-[#1a7a5e] rounded-xl flex items-center justify-center mb-4 text-xl group-hover:scale-110 transition-transform">📋</div>
+                <h3 className="text-lg font-bold mb-1">Novi 5S Audit</h3>
+                <p className="text-sm text-[#5a5a5a]">Pokrenite novu provjeru čistoće i organizacije.</p>
+              </a>
+              <a href="/alati/gemba-walk" className="bg-white border border-[#e2e2e2] p-6 rounded-2xl hover:border-[#1a7a5e] hover:shadow-lg transition-all group">
+                <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-4 text-xl group-hover:scale-110 transition-transform">🚶</div>
+                <h3 className="text-lg font-bold mb-1">Novi Gemba Walk</h3>
+                <p className="text-sm text-[#5a5a5a]">Dokumentirajte zapažanja i definirajte akcije.</p>
+              </a>
+            </div>
+
+            {/* Nedavni 5S auditi */}
+            {recentAudits.length > 0 && (
+              <div className="bg-white border border-[#e2e2e2] rounded-2xl p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="font-bold text-[#1a1a1a]">Nedavni 5S auditi</h3>
+                  <a href="/povijest" className="text-xs text-[#1a7a5e] font-semibold hover:underline">Svi →</a>
+                </div>
+                <div className="space-y-3">
+                  {recentAudits.map((audit) => (
+                    <a key={audit.id} href={`/povijest/${audit.id}`} className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#fafaf8] transition-all group">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold ${getScoreColor(audit.total_score)}`}>
+                        {audit.total_score}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-bold text-[#1a1a1a] truncate">{audit.firma || 'Nenavedena firma'}</div>
+                        <div className="text-xs text-[#9a9a9a]">{audit.lokacija} · {new Date(audit.datum).toLocaleDateString('hr-HR')}</div>
+                      </div>
+                      <span className="text-xs text-[#9a9a9a] group-hover:text-[#1a7a5e]">→</span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Nedavni Gemba Walkovi */}
+            {recentGemba.length > 0 && (
+              <div className="bg-white border border-[#e2e2e2] rounded-2xl p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="font-bold text-[#1a1a1a]">Nedavni Gemba Walkovi</h3>
+                  <a href="/povijest" className="text-xs text-[#1a7a5e] font-semibold hover:underline">Svi →</a>
+                </div>
+                <div className="space-y-3">
+                  {recentGemba.map((g) => (
+                    <div key={g.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#fafaf8] transition-all">
+                      <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-lg">🚶</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-bold text-[#1a1a1a] truncate">{g.lokacija || 'Nenavedena lokacija'}</div>
+                        <div className="text-xs text-[#9a9a9a]">{g.voditelj} · {g.datum ? new Date(g.datum).toLocaleDateString('hr-HR') : ''}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Status sidebar */}
-          <div className="space-y-6">
+          <div>
             <div className="bg-white border border-[#e2e2e2] rounded-2xl p-6">
               <h3 className="text-xs font-bold text-[#9a9a9a] uppercase tracking-wider mb-4">Vaš status</h3>
               <div className="flex items-center gap-3 mb-6">
@@ -101,7 +159,6 @@ export default function DashboardPage() {
                   )}
                 </div>
               </div>
-
               {isPro ? (
                 <div className="bg-[#e8f5f0] text-[#1a7a5e] text-xs font-semibold px-4 py-3 rounded-xl text-center">
                   ✅ PRO plan aktivan
@@ -111,10 +168,7 @@ export default function DashboardPage() {
                   <p className="text-xs text-[#5a5a5a] leading-relaxed">
                     Isprobajte sve PRO funkcije <strong>besplatno 1 mjesec</strong>. Nakon toga €29,99/mj. Otkažite kad god želite.
                   </p>
-                  <button
-                    onClick={handleUpgrade}
-                    className="w-full py-2.5 bg-[#1a7a5e] text-white text-sm font-bold rounded-xl hover:bg-[#155f49] transition-all"
-                  >
+                  <button onClick={handleUpgrade} className="w-full py-2.5 bg-[#1a7a5e] text-white text-sm font-bold rounded-xl hover:bg-[#155f49] transition-all">
                     Aktiviraj PRO — 1 mj. besplatno →
                   </button>
                 </div>
