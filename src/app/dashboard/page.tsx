@@ -13,6 +13,7 @@ export default function DashboardPage() {
   const [recentA3, setRecentA3] = useState<any[]>([]);
   const [recentZasto, setRecentZasto] = useState<any[]>([]);
   const [recentOEE, setRecentOEE] = useState<any[]>([]);
+  const [recentKaizen, setRecentKaizen] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -47,9 +48,14 @@ export default function DashboardPage() {
       setRecentZasto(zasto || []);
 
       const { data: oee } = await supabase.from('oee_kalkulator')
-        .select('id, created_at, pogon, period, odgovorna_osoba, strojevi')
+        .select('id, created_at, pogon, period, strojevi')
         .order('created_at', { ascending: false }).limit(2);
       setRecentOEE(oee || []);
+
+      const { data: kaizen } = await supabase.from('kaizen_prijedlog')
+        .select('id, created_at, odjel, datum, kategorija, prioritet, status')
+        .order('created_at', { ascending: false }).limit(2);
+      setRecentKaizen(kaizen || []);
 
       setLoading(false);
     };
@@ -84,7 +90,7 @@ export default function DashboardPage() {
     <div className="bg-[#fafaf8] min-h-screen">
       <div className="max-w-[1100px] mx-auto px-6 py-12">
 
-        <div className="mb-12">
+        <div className="mb-10">
           <h1 className="font-serif text-4xl text-[#1a1a1a] mb-2">
             Dobrodošli, {user?.user_metadata?.full_name || 'Korisniče'}
           </h1>
@@ -94,35 +100,25 @@ export default function DashboardPage() {
         <div className="grid md:grid-cols-3 gap-6">
           <div className="md:col-span-2 space-y-6">
 
-            {/* Alati — 2x3 grid */}
-            <div className="grid sm:grid-cols-3 gap-4">
-              <a href="/alati/5s-audit" className="bg-white border border-[#e2e2e2] p-5 rounded-2xl hover:border-[#1a7a5e] hover:shadow-lg transition-all group">
-                <div className="w-10 h-10 bg-[#e8f5f0] text-[#1a7a5e] rounded-xl flex items-center justify-center mb-3 text-lg group-hover:scale-110 transition-transform">📋</div>
-                <h3 className="text-sm font-bold mb-1">Novi 5S Audit</h3>
-                <p className="text-xs text-[#5a5a5a]">Provjera čistoće i organizacije.</p>
-              </a>
-              <a href="/alati/gemba-walk" className="bg-white border border-[#e2e2e2] p-5 rounded-2xl hover:border-[#1a7a5e] hover:shadow-lg transition-all group">
-                <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-3 text-lg group-hover:scale-110 transition-transform">🚶</div>
-                <h3 className="text-sm font-bold mb-1">Novi Gemba Walk</h3>
-                <p className="text-xs text-[#5a5a5a]">Zapažanja i akcijski plan.</p>
-              </a>
-              <a href="/alati/a3-obrazac" className="bg-white border border-[#e2e2e2] p-5 rounded-2xl hover:border-[#1a7a5e] hover:shadow-lg transition-all group">
-                <div className="w-10 h-10 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center mb-3 text-lg group-hover:scale-110 transition-transform">📄</div>
-                <h3 className="text-sm font-bold mb-1">Novi A3 Obrazac</h3>
-                <p className="text-xs text-[#5a5a5a]">Strukturirano rješavanje problema.</p>
-              </a>
-              <a href="/alati/5-zasto" className="bg-white border border-[#e2e2e2] p-5 rounded-2xl hover:border-[#1a7a5e] hover:shadow-lg transition-all group">
-                <div className="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center mb-3 text-lg group-hover:scale-110 transition-transform">❓</div>
-                <h3 className="text-sm font-bold mb-1">Nova 5x Zašto</h3>
-                <p className="text-xs text-[#5a5a5a]">Pronađite korijenski uzrok.</p>
-              </a>
-              <a href="/alati/oee-kalkulator" className="bg-white border border-[#e2e2e2] p-5 rounded-2xl hover:border-[#1a7a5e] hover:shadow-lg transition-all group">
-                <div className="w-10 h-10 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center mb-3 text-lg group-hover:scale-110 transition-transform">📊</div>
-                <h3 className="text-sm font-bold mb-1">Novi OEE Izračun</h3>
-                <p className="text-xs text-[#5a5a5a]">Učinkovitost opreme i strojeva.</p>
-              </a>
+            {/* Alati — 3x2 grid */}
+            <div className="grid sm:grid-cols-3 gap-3">
+              {[
+                { href: '/alati/5s-audit', icon: '📋', label: 'Novi 5S Audit', opis: 'Provjera čistoće i organizacije.', bg: 'bg-[#e8f5f0] text-[#1a7a5e]' },
+                { href: '/alati/gemba-walk', icon: '🚶', label: 'Novi Gemba Walk', opis: 'Zapažanja i akcijski plan.', bg: 'bg-blue-50 text-blue-600' },
+                { href: '/alati/a3-obrazac', icon: '📄', label: 'Novi A3 Obrazac', opis: 'Strukturirano rješavanje problema.', bg: 'bg-orange-50 text-orange-600' },
+                { href: '/alati/5-zasto', icon: '❓', label: 'Nova 5x Zašto', opis: 'Pronađite korijenski uzrok.', bg: 'bg-red-50 text-red-600' },
+                { href: '/alati/oee-kalkulator', icon: '📊', label: 'Novi OEE Izračun', opis: 'Učinkovitost opreme i strojeva.', bg: 'bg-purple-50 text-purple-600' },
+                { href: '/alati/kaizen-prijedlog', icon: '♾️', label: 'Novi Kaizen Prijedlog', opis: 'Predložite poboljšanje procesa.', bg: 'bg-[#e8f5f0] text-[#1a7a5e]' },
+              ].map(a => (
+                <a key={a.href} href={a.href} className="bg-white border border-[#e2e2e2] p-5 rounded-2xl hover:border-[#1a7a5e] hover:shadow-lg transition-all group">
+                  <div className={`w-10 h-10 ${a.bg} rounded-xl flex items-center justify-center mb-3 text-lg group-hover:scale-110 transition-transform`}>{a.icon}</div>
+                  <h3 className="text-sm font-bold mb-1">{a.label}</h3>
+                  <p className="text-xs text-[#5a5a5a]">{a.opis}</p>
+                </a>
+              ))}
             </div>
 
+            {/* Nedavni zapisi */}
             {recentAudits.length > 0 && (
               <div className="bg-white border border-[#e2e2e2] rounded-2xl p-6">
                 <div className="flex justify-between items-center mb-4">
@@ -188,7 +184,7 @@ export default function DashboardPage() {
               <div className="bg-white border border-[#e2e2e2] rounded-2xl p-6">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="font-bold text-[#1a1a1a]">Nedavne 5x Zašto analize</h3>
-                  <a href="/povijest" className="text-xs text-[#1a7a5e] font-semibold hover:underline">Svi →</a>
+                  <a href="/povijest" className="text-xs text-[#1a7a5e] font-semibond hover:underline">Svi →</a>
                 </div>
                 <div className="space-y-3">
                   {recentZasto.map((z) => (
@@ -216,7 +212,27 @@ export default function DashboardPage() {
                       <div className="w-10 h-10 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center text-lg">📊</div>
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-bold text-[#1a1a1a] truncate">{o.pogon || 'Nenavedeni pogon'}</div>
-                        <div className="text-xs text-[#9a9a9a]">{o.period || '—'} · {Array.isArray(o.strojevi) ? o.strojevi.length : 0} {Array.isArray(o.strojevi) && o.strojevi.length === 1 ? 'stroj' : 'strojeva'}</div>
+                        <div className="text-xs text-[#9a9a9a]">{o.period || '—'} · {Array.isArray(o.strojevi) ? o.strojevi.length : 0} strojeva</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {recentKaizen.length > 0 && (
+              <div className="bg-white border border-[#e2e2e2] rounded-2xl p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="font-bold text-[#1a1a1a]">Nedavni Kaizen prijedlozi</h3>
+                  <a href="/povijest" className="text-xs text-[#1a7a5e] font-semibold hover:underline">Svi →</a>
+                </div>
+                <div className="space-y-3">
+                  {recentKaizen.map((k) => (
+                    <div key={k.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#fafaf8] transition-all">
+                      <div className="w-10 h-10 rounded-lg bg-[#e8f5f0] text-[#1a7a5e] flex items-center justify-center text-lg">♾️</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-bold text-[#1a1a1a] truncate">{k.odjel || 'Nenavedeni odjel'}</div>
+                        <div className="text-xs text-[#9a9a9a]">{k.kategorija || '—'} · {k.status}</div>
                       </div>
                     </div>
                   ))}
