@@ -1,0 +1,202 @@
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
+import { useRouter } from 'next/navigation';
+import { Save, Loader2 } from 'lucide-react';
+
+const KATEGORIJE = [
+  { value: 'Sigurnost', emoji: '🦺', color: 'border-red-300 bg-red-50 text-red-700' },
+  { value: 'Kvaliteta', emoji: '✅', color: 'border-blue-300 bg-blue-50 text-blue-700' },
+  { value: 'Produktivnost', emoji: '⚡', color: 'border-yellow-300 bg-yellow-50 text-yellow-700' },
+  { value: 'Troškovi', emoji: '💰', color: 'border-green-300 bg-green-50 text-green-700' },
+  { value: 'Ergonomija', emoji: '🧑‍🔧', color: 'border-purple-300 bg-purple-50 text-purple-700' },
+  { value: 'Okoliš', emoji: '🌱', color: 'border-teal-300 bg-teal-50 text-teal-700' },
+  { value: 'Dostava', emoji: '🚚', color: 'border-orange-300 bg-orange-50 text-orange-700' },
+  { value: 'Ostalo', emoji: '💡', color: 'border-gray-300 bg-gray-50 text-gray-700' },
+];
+
+const PRIORITETI = [
+  { value: 'Nizak', emoji: '🟢', opis: 'Može pričekati, nema hitnosti' },
+  { value: 'Srednji', emoji: '🟡', opis: 'Treba riješiti u razumnom roku' },
+  { value: 'Visoki', emoji: '🟠', opis: 'Važno, utječe na rad' },
+  { value: 'Kritičan', emoji: '🔴', opis: 'Hitno, blokira ili ugrožava' },
+];
+
+const STATUSI = ['Otvoreno', 'U razmatranju', 'Odobreno', 'U provedbi', 'Završeno', 'Odbijeno'];
+
+export default function KaizenPrijedlogPage() {
+  const [user, setUser] = useState<any>(null);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const router = useRouter();
+
+  const [ime, setIme] = useState('');
+  const [datum, setDatum] = useState('');
+  const [odjel, setOdjel] = useState('');
+  const [radnoMjesto, setRadnoMjesto] = useState('');
+  const [probGdje, setProbGdje] = useState('');
+  const [probOpis, setProbOpis] = useState('');
+  const [baPrije, setBaPrije] = useState('');
+  const [baPoslije, setBaPoslije] = useState('');
+  const [rjesOpis, setRjesOpis] = useState('');
+  const [rjesPotrebno, setRjesPotrebno] = useState('');
+  const [rjesTrosak, setRjesTrosak] = useState('');
+  const [kategorija, setKategorija] = useState('');
+  const [prioritet, setPrioritet] = useState('');
+  const [status, setStatus] = useState('Otvoreno');
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) router.push('/prijava');
+      else setUser(user);
+    });
+    setDatum(new Date().toISOString().split('T')[0]);
+  }, [router]);
+
+  const handleSave = async () => {
+    if (!user) return;
+    setSaving(true);
+    const { error } = await supabase.from('kaizen_prijedlog').insert({
+      user_id: user.id,
+      ime, datum, odjel, radno_mjesto: radnoMjesto,
+      prob_gdje: probGdje, prob_opis: probOpis,
+      ba_prije: baPrije, ba_poslije: baPoslije,
+      rjes_opis: rjesOpis, rjes_potrebno: rjesPotrebno, rjes_trosak: rjesTrosak,
+      kategorija, prioritet, status,
+    });
+    setSaving(false);
+    if (!error) setSaved(true);
+  };
+
+  const inputCls = "w-full px-3 py-2 border border-[#e2e2e2] rounded-lg text-sm focus:border-[#1a7a5e] outline-none bg-[#fafaf8]";
+  const labelCls = "block text-xs font-medium text-[#5a5a5a] mb-1";
+  const textareaCls = `${inputCls} resize-none`;
+
+  const Section = ({ icon, title, subtitle, color, children }: any) => (
+    <div className="bg-white border border-[#e2e2e2] rounded-xl overflow-hidden">
+      <div className="bg-[#fafaf8] border-b border-[#e2e2e2] px-4 py-3 flex items-center gap-3">
+        <div className={`w-8 h-8 ${color} rounded-lg flex items-center justify-center text-sm`}>{icon}</div>
+        <div><h3 className="text-sm font-semibold">{title}</h3><p className="text-xs text-[#9a9a9a]">{subtitle}</p></div>
+      </div>
+      <div className="p-4">{children}</div>
+    </div>
+  );
+
+  return (
+    <div className="bg-[#fafaf8] min-h-screen pb-20">
+      {/* Header */}
+      <div className="bg-white border-b border-[#e2e2e2] px-6 py-6">
+        <div className="max-w-[900px] mx-auto">
+          <div className="inline-flex items-center gap-2 text-xs font-semibold text-[#1a7a5e] bg-[#e8f5f0] px-3 py-1 rounded-full mb-3">♾️ Kaizen</div>
+          <h1 className="font-serif text-3xl text-[#1a1a1a] mb-1">Kaizen prijedlog</h1>
+          <p className="text-sm text-[#5a5a5a]">Predložite poboljšanje procesa, radnog mjesta ili sigurnosti. Svaki prijedlog je vrijedan!</p>
+        </div>
+      </div>
+
+      {/* Toolbar */}
+      <div className="bg-white border-b border-[#e2e2e2] px-6 py-3">
+        <div className="max-w-[900px] mx-auto flex gap-3">
+          <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 bg-[#1a7a5e] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#155f49] transition-all disabled:opacity-70">
+            {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+            {saving ? 'Spremam...' : 'Spremi prijedlog'}
+          </button>
+          {saved && <span className="text-sm text-[#1a7a5e] font-semibold self-center">✅ Spremljeno!</span>}
+        </div>
+      </div>
+
+      <div className="max-w-[900px] mx-auto px-6 mt-6 space-y-4">
+
+        {/* 1. Podnositelj */}
+        <Section icon="👤" title="Podnositelj prijedloga" subtitle="Može ostati anonimno" color="bg-[#e8f5f0]">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div><label className={labelCls}>Ime i prezime (opcionalno)</label><input type="text" className={inputCls} placeholder="Ime Prezime — može ostati anonimno" value={ime} onChange={e => setIme(e.target.value)} /></div>
+            <div><label className={labelCls}>Datum prijedloga</label><input type="date" className={inputCls} value={datum} onChange={e => setDatum(e.target.value)} /></div>
+            <div><label className={labelCls}>Odjel / Pogon</label><input type="text" className={inputCls} placeholder="npr. Montaža, Skladište, Kvaliteta..." value={odjel} onChange={e => setOdjel(e.target.value)} /></div>
+            <div><label className={labelCls}>Radno mjesto</label><input type="text" className={inputCls} placeholder="npr. Operater, Voditelj smjene, Inženjer..." value={radnoMjesto} onChange={e => setRadnoMjesto(e.target.value)} /></div>
+          </div>
+        </Section>
+
+        {/* 2. Problem */}
+        <Section icon="🔍" title="Opis problema ili prilike" subtitle="Što se događa i gdje?" color="bg-red-50">
+          <div className="space-y-4">
+            <div><label className={labelCls}>Gdje se problem pojavljuje?</label><input type="text" className={inputCls} placeholder="npr. Linija 3 — operacija zavarivanja, Skladište sirovina — zona B" value={probGdje} onChange={e => setProbGdje(e.target.value)} /></div>
+            <div><label className={labelCls}>Opis problema / prilike</label><textarea className={textareaCls} rows={4} placeholder={`Opišite konkretno što se događa, koliko često, koji su simptomi...\n\nPrimjer: Operateri troše prosječno 8 minuta po smjeni tražeći alat jer nema fiksnog mjesta.`} value={probOpis} onChange={e => setProbOpis(e.target.value)} /></div>
+
+            {/* Prije / Poslije */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                <label className="block text-xs font-bold text-red-600 uppercase tracking-wider mb-2">🔴 Trenutno stanje (Prije)</label>
+                <textarea className="w-full px-3 py-2 border border-red-200 rounded-lg text-sm focus:border-red-400 outline-none bg-white resize-none" rows={4} placeholder={`Opišite kako trenutno izgleda...\nKoliko dugo traje, koliko košta, koliko je ljudi pogođeno...`} value={baPrije} onChange={e => setBaPrije(e.target.value)} />
+              </div>
+              <div className="bg-[#e8f5f0] border border-[#1a7a5e]/20 rounded-xl p-4">
+                <label className="block text-xs font-bold text-[#1a7a5e] uppercase tracking-wider mb-2">✅ Željeno stanje (Poslije)</label>
+                <textarea className="w-full px-3 py-2 border border-[#1a7a5e]/30 rounded-lg text-sm focus:border-[#1a7a5e] outline-none bg-white resize-none" rows={4} placeholder={`Kako bi izgledalo idealno stanje...\nŠto bi se promijenilo, kako bi proces tekao...`} value={baPoslije} onChange={e => setBaPoslije(e.target.value)} />
+              </div>
+            </div>
+          </div>
+        </Section>
+
+        {/* 3. Rješenje */}
+        <Section icon="💡" title="Predloženo rješenje" subtitle="Što konkretno predlažete?" color="bg-yellow-50">
+          <div className="space-y-4">
+            <div><label className={labelCls}>Predloženo rješenje</label><textarea className={textareaCls} rows={4} placeholder={`Opišite konkretno što predlažete...\n\nPrimjer: Napraviti shadow board za alate — svaki alat ima svoje označeno mjesto. Operateri odmah vide koji alat nedostaje.`} value={rjesOpis} onChange={e => setRjesOpis(e.target.value)} /></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div><label className={labelCls}>Što je potrebno za implementaciju?</label><textarea className={textareaCls} rows={3} placeholder="Materijali, oprema, pomoć, odobrenje..." value={rjesPotrebno} onChange={e => setRjesPotrebno(e.target.value)} /></div>
+              <div><label className={labelCls}>Procijenjeni trošak</label><textarea className={textareaCls} rows={3} placeholder={`npr. Bez troška (samo rad)\n100-500 €\nTreba procjena...`} value={rjesTrosak} onChange={e => setRjesTrosak(e.target.value)} /></div>
+            </div>
+          </div>
+        </Section>
+
+        {/* 4. Kategorija */}
+        <Section icon="🏷️" title="Kategorija poboljšanja" subtitle="Odaberite jednu kategoriju" color="bg-blue-50">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {KATEGORIJE.map(k => (
+              <button key={k.value} type="button" onClick={() => setKategorija(k.value === kategorija ? '' : k.value)}
+                className={`p-3 rounded-xl border-2 text-center transition-all ${kategorija === k.value ? k.color + ' border-current' : 'border-[#e2e2e2] bg-white hover:bg-[#fafaf8]'}`}>
+                <div className="text-2xl mb-1">{k.emoji}</div>
+                <div className="text-xs font-semibold">{k.value}</div>
+              </button>
+            ))}
+          </div>
+        </Section>
+
+        {/* 5. Prioritet */}
+        <Section icon="🎯" title="Prioritet" subtitle="Koliko je hitno?" color="bg-orange-50">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {PRIORITETI.map(p => (
+              <button key={p.value} type="button" onClick={() => setPrioritet(p.value === prioritet ? '' : p.value)}
+                className={`p-3 rounded-xl border-2 text-center transition-all ${prioritet === p.value ? 'border-[#1a7a5e] bg-[#e8f5f0]' : 'border-[#e2e2e2] bg-white hover:bg-[#fafaf8]'}`}>
+                <div className="text-2xl mb-1">{p.emoji}</div>
+                <div className="text-xs font-bold mb-0.5">{p.value}</div>
+                <div className="text-[10px] text-[#9a9a9a]">{p.opis}</div>
+              </button>
+            ))}
+          </div>
+        </Section>
+
+        {/* 6. Status */}
+        <Section icon="📌" title="Status praćenja" subtitle="Ažurirajte status provedbe" color="bg-purple-50">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {STATUSI.map(s => (
+              <button key={s} type="button" onClick={() => setStatus(s)}
+                className={`px-4 py-2.5 rounded-xl border-2 text-sm font-semibold transition-all ${status === s ? 'border-[#1a7a5e] bg-[#e8f5f0] text-[#1a7a5e]' : 'border-[#e2e2e2] bg-white text-[#5a5a5a] hover:bg-[#fafaf8]'}`}>
+                {s}
+              </button>
+            ))}
+          </div>
+        </Section>
+
+        <button onClick={handleSave} disabled={saving} className="w-full py-3 bg-[#1a7a5e] text-white font-bold rounded-xl hover:bg-[#155f49] transition-all flex items-center justify-center gap-2 disabled:opacity-70">
+          {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+          {saving ? 'Spremam...' : 'Spremi Kaizen prijedlog'}
+        </button>
+        {saved && (
+          <div className="bg-[#e8f5f0] text-[#1a7a5e] text-sm font-semibold px-4 py-3 rounded-xl text-center">
+            ✅ Kaizen prijedlog je uspješno spremljen! <a href="/povijest" className="underline ml-2">Pogledaj povijest →</a>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
