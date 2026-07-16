@@ -8,8 +8,9 @@ import { Calendar, MapPin, ChevronRight, Loader2, Info } from 'lucide-react';
 export default function HistoryPage() {
   const [audits, setAudits] = useState<any[]>([]);
   const [gembaWalks, setGembaWalks] = useState<any[]>([]);
+  const [a3Obrasci, setA3Obrasci] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'5s' | 'gemba'>('5s');
+  const [activeTab, setActiveTab] = useState<'5s' | 'gemba' | 'a3'>('5s');
   const router = useRouter();
 
   useEffect(() => {
@@ -29,6 +30,12 @@ export default function HistoryPage() {
         .order('created_at', { ascending: false });
       setGembaWalks(gembaData || []);
 
+      const { data: a3Data } = await supabase
+        .from('a3_obrazac')
+        .select('id, created_at, naslov, vlasnik, datum_otvaranja, odjel, cilj_postignut, akcije')
+        .order('created_at', { ascending: false });
+      setA3Obrasci(a3Data || []);
+
       setIsLoading(false);
     };
     checkUserAndFetch();
@@ -38,6 +45,12 @@ export default function HistoryPage() {
     if (score >= 80) return 'bg-[#dcfce7] text-[#16a34a]';
     if (score >= 60) return 'bg-[#fef9c3] text-[#ca8a04]';
     return 'bg-[#fee2e2] text-[#dc2626]';
+  };
+
+  const getCiljColor = (cilj: string) => {
+    if (cilj === 'Da — cilj postignut') return 'text-green-600 bg-green-50';
+    if (cilj === 'Djelomično') return 'text-yellow-600 bg-yellow-50';
+    return 'text-red-600 bg-red-50';
   };
 
   if (isLoading) return (
@@ -60,18 +73,15 @@ export default function HistoryPage() {
       <div className="max-w-[900px] mx-auto px-6 mt-6">
 
         {/* Tabovi */}
-        <div className="flex gap-2 mb-6 bg-white border border-[#e2e2e2] rounded-xl p-1 w-fit">
-          <button
-            onClick={() => setActiveTab('5s')}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === '5s' ? 'bg-[#1a7a5e] text-white' : 'text-[#5a5a5a] hover:bg-[#fafaf8]'}`}
-          >
+        <div className="flex gap-2 mb-6 bg-white border border-[#e2e2e2] rounded-xl p-1 w-fit flex-wrap">
+          <button onClick={() => setActiveTab('5s')} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === '5s' ? 'bg-[#1a7a5e] text-white' : 'text-[#5a5a5a] hover:bg-[#fafaf8]'}`}>
             📋 5S Auditi ({audits.length})
           </button>
-          <button
-            onClick={() => setActiveTab('gemba')}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === 'gemba' ? 'bg-[#1a7a5e] text-white' : 'text-[#5a5a5a] hover:bg-[#fafaf8]'}`}
-          >
+          <button onClick={() => setActiveTab('gemba')} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === 'gemba' ? 'bg-[#1a7a5e] text-white' : 'text-[#5a5a5a] hover:bg-[#fafaf8]'}`}>
             🚶 Gemba Walkovi ({gembaWalks.length})
+          </button>
+          <button onClick={() => setActiveTab('a3')} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === 'a3' ? 'bg-[#1a7a5e] text-white' : 'text-[#5a5a5a] hover:bg-[#fafaf8]'}`}>
+            📄 A3 Obrasci ({a3Obrasci.length})
           </button>
         </div>
 
@@ -83,9 +93,7 @@ export default function HistoryPage() {
                 <div className="text-4xl mb-4">📋</div>
                 <h3 className="text-xl font-bold mb-2">Još nemate spremljenih 5S audita</h3>
                 <p className="text-[#5a5a5a] mb-6">Pokrenite prvi audit i spremite ga u portal.</p>
-                <a href="/alati/5s-audit" className="bg-[#1a7a5e] text-white px-6 py-2.5 rounded-xl font-semibold text-sm hover:bg-[#155f49] transition-all">
-                  Novi 5S Audit →
-                </a>
+                <a href="/alati/5s-audit" className="bg-[#1a7a5e] text-white px-6 py-2.5 rounded-xl font-semibold text-sm hover:bg-[#155f49] transition-all">Novi 5S Audit →</a>
               </div>
             ) : (
               <>
@@ -93,9 +101,7 @@ export default function HistoryPage() {
                 {audits.map((audit) => (
                   <a key={audit.id} href={`/povijest/${audit.id}`} className="bg-white border border-[#e2e2e2] rounded-xl p-4 hover:border-[#1a7a5e] hover:shadow-md transition-all block group">
                     <div className="flex items-center gap-4">
-                      <div className={`w-12 h-12 rounded-lg flex items-center justify-center text-lg font-bold ${getScoreColor(audit.total_score)}`}>
-                        {audit.total_score}
-                      </div>
+                      <div className={`w-12 h-12 rounded-lg flex items-center justify-center text-lg font-bold ${getScoreColor(audit.total_score)}`}>{audit.total_score}</div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
                           <span className="font-bold text-[#1a1a1a] truncate">{audit.firma || 'Nenavedena firma'}</span>
@@ -123,9 +129,7 @@ export default function HistoryPage() {
                 <div className="text-4xl mb-4">🚶</div>
                 <h3 className="text-xl font-bold mb-2">Još nemate spremljenih Gemba Walkova</h3>
                 <p className="text-[#5a5a5a] mb-6">Pokrenite prvi Gemba Walk i spremite ga u portal.</p>
-                <a href="/alati/gemba-walk" className="bg-[#1a7a5e] text-white px-6 py-2.5 rounded-xl font-semibold text-sm hover:bg-[#155f49] transition-all">
-                  Novi Gemba Walk →
-                </a>
+                <a href="/alati/gemba-walk" className="bg-[#1a7a5e] text-white px-6 py-2.5 rounded-xl font-semibold text-sm hover:bg-[#155f49] transition-all">Novi Gemba Walk →</a>
               </div>
             ) : (
               <>
@@ -147,6 +151,46 @@ export default function HistoryPage() {
                           <span className="text-xs text-[#9a9a9a]">📍 {Array.isArray(g.zapazanja) ? g.zapazanja.length : 0} zapažanja</span>
                           <span className="text-xs text-[#9a9a9a]">🎯 {Array.isArray(g.akcije) ? g.akcije.length : 0} akcija</span>
                         </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* A3 Obrasci */}
+        {activeTab === 'a3' && (
+          <div className="space-y-4">
+            {a3Obrasci.length === 0 ? (
+              <div className="bg-white border border-[#e2e2e2] rounded-2xl p-12 text-center">
+                <div className="text-4xl mb-4">📄</div>
+                <h3 className="text-xl font-bold mb-2">Još nemate spremljenih A3 obrazaca</h3>
+                <p className="text-[#5a5a5a] mb-6">Pokrenite prvi A3 obrazac i spremite ga u portal.</p>
+                <a href="/alati/a3-obrazac" className="bg-[#1a7a5e] text-white px-6 py-2.5 rounded-xl font-semibold text-sm hover:bg-[#155f49] transition-all">Novi A3 Obrazac →</a>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-[#9a9a9a] uppercase tracking-wider font-semibold">Moji A3 obrasci ({a3Obrasci.length})</p>
+                {a3Obrasci.map((a) => (
+                  <div key={a.id} className="bg-white border border-[#e2e2e2] rounded-xl p-4 hover:border-[#1a7a5e] hover:shadow-md transition-all">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center text-xl">📄</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="font-bold text-[#1a1a1a] truncate">{a.naslov || 'Bez naslova'}</span>
+                          <span className="text-[10px] uppercase font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded">A3</span>
+                        </div>
+                        <div className="flex flex-wrap gap-x-4 gap-y-1">
+                          <span className="text-xs text-[#5a5a5a]">Vlasnik: {a.vlasnik || '—'}</span>
+                          <span className="flex items-center gap-1.5 text-xs text-[#5a5a5a]"><Calendar size={12} className="text-[#9a9a9a]" />{a.datum_otvaranja ? new Date(a.datum_otvaranja).toLocaleDateString('hr-HR') : '—'}</span>
+                        </div>
+                        {a.cilj_postignut && (
+                          <div className="mt-2">
+                            <span className={`text-xs font-semibold px-2 py-0.5 rounded ${getCiljColor(a.cilj_postignut)}`}>{a.cilj_postignut}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
