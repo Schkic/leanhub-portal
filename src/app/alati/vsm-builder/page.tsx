@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import { Save, Loader2, Trash2, Plus, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Save, Loader2, Trash2, Plus, X, ChevronDown, ChevronUp, HelpCircle, BookOpen } from 'lucide-react';
 
 type ElementType = 'supplier' | 'customer' | 'process' | 'inventory' | 'transport' |
   'supermarket' | 'kaizen' | 'control' | 'fifo' | 'operator' |
@@ -241,6 +241,7 @@ export default function VSMPage() {
   const [connecting, setConnecting] = useState<{ fromId: string; tip: string } | null>(null);
   const [konekcijaMode, setKonekcijaMode] = useState('material');
   const [showKonToolbar, setShowKonToolbar] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ Proces: true, Materijal: true, Kanban: false, Ostalo: false });
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -341,6 +342,14 @@ export default function VSMPage() {
             {saving ? 'Spremam...' : 'Spremi'}
           </button>
           {saved && <span className="text-sm text-[#1a7a5e] font-semibold self-center">✅</span>}
+          <button onClick={() => setShowHelp(true)}
+            className="flex items-center gap-2 border border-[#e2e2e2] text-[#5a5a5a] px-3 py-2 rounded-lg text-sm font-semibold hover:bg-[#e8f5f0] hover:text-[#1a7a5e] transition-all">
+            <HelpCircle size={16}/> Upute
+          </button>
+          <a href="/alati/vodici/vsm" target="_blank"
+            className="flex items-center gap-2 border border-[#e2e2e2] text-[#5a5a5a] px-3 py-2 rounded-lg text-sm font-semibold hover:bg-blue-50 hover:text-blue-700 transition-all">
+            <BookOpen size={16}/> Vodič
+          </a>
         </div>
       </div>
 
@@ -494,6 +503,121 @@ export default function VSMPage() {
         ))}
         <span className="ml-auto text-[10px] text-[#c0c0c0]">Klikni · Povuci · Poveži</span>
       </div>
+
+      {/* Help Overlay */}
+      {showHelp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{backgroundColor: 'rgba(0,0,0,0.5)'}}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[#e2e2e2] sticky top-0 bg-white">
+              <h2 className="text-lg font-bold text-[#1a1a1a]">🗺️ Upute za VSM Builder</h2>
+              <button onClick={() => setShowHelp(false)} className="text-[#9a9a9a] hover:text-[#1a1a1a]"><X size={20}/></button>
+            </div>
+            <div className="p-6 space-y-6">
+
+              {/* Osnovne radnje */}
+              <section>
+                <h3 className="text-sm font-bold text-[#1a1a1a] mb-3">⚡ Osnovne radnje</h3>
+                <div className="space-y-2">
+                  {[
+                    { a: 'Dodaj element', o: 'Klikni na element u lijevoj paleti — pojavljuje se na canvasu' },
+                    { a: 'Pomakni element', o: 'Klikni i povuci element po canvasu' },
+                    { a: 'Odaberi element', o: 'Klikni na element — otvara se desni panel sa svojstvima' },
+                    { a: 'Uredi podatke', o: 'U desnom panelu unesi naziv i podatke za odabrani element' },
+                    { a: 'Poveži elemente', o: 'Odaberi element → klikni "Poveži element" → klikni na ciljni element' },
+                    { a: 'Tip veze', o: 'U lijevoj paleti odaberi tip veze PRIJE klika na "Poveži element"' },
+                    { a: 'Obriši element', o: 'Odaberi element → klikni "Obriši" u desnom panelu ili paleti' },
+                    { a: 'Spremi dijagram', o: 'Klikni "Spremi" u gornjem desnom kutu — sprema u Supabase' },
+                  ].map(r => (
+                    <div key={r.a} className="flex gap-3 bg-[#fafaf8] rounded-lg p-3">
+                      <span className="text-xs font-bold text-[#1a7a5e] shrink-0 w-32">{r.a}</span>
+                      <span className="text-xs text-[#5a5a5a]">{r.o}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              {/* Simboli */}
+              <section>
+                <h3 className="text-sm font-bold text-[#1a1a1a] mb-3">🔷 Simboli i što znače</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { s: '🏭', n: 'Dobavljač', o: 'Vanjski izvor materijala — lijevi kraj mape' },
+                    { s: '👤', n: 'Kupac', o: 'Krajnji kupac — desni kraj mape' },
+                    { s: '⬜', n: 'Proces', o: 'Korak koji transformira materijal (C/T, C/O, smjene...)' },
+                    { s: '👷', n: 'Radnik', o: 'Broj operatera na procesu' },
+                    { s: '📋', n: 'Planiranje', o: 'PPC/MRP — središte informacijskog toka' },
+                    { s: '▲', n: 'Zaliha', o: 'WIP između procesa (količina, dani)' },
+                    { s: '📦', n: 'Supermarket', o: 'Pull zalihe — povlačenje po potrebi' },
+                    { s: '➡️', n: 'FIFO traka', o: 'Kontrolirani tok bez nakupljanja' },
+                    { s: '🚚', n: 'Transport', o: 'Fizički prijevoz materijala' },
+                    { s: '🎴', n: 'Prod. kanban', o: 'Signal za pokretanje proizvodnje' },
+                    { s: '🔄', n: 'Pull kanban', o: 'Signal za povlačenje iz supermarketa' },
+                    { s: '⚡', n: 'Kaizen blic', o: 'Označava prilike za poboljšanje' },
+                    { s: '📏', n: 'Vremenka linija', o: 'VA/NVA segmenti na dnu mape' },
+                  ].map(s => (
+                    <div key={s.n} className="flex items-start gap-2 bg-[#fafaf8] rounded-lg p-2">
+                      <span className="text-lg shrink-0">{s.s}</span>
+                      <div>
+                        <p className="text-xs font-bold text-[#1a1a1a]">{s.n}</p>
+                        <p className="text-[10px] text-[#9a9a9a]">{s.o}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              {/* Tipovi veza */}
+              <section>
+                <h3 className="text-sm font-bold text-[#1a1a1a] mb-3">🔗 Tipovi veza</h3>
+                <div className="space-y-2">
+                  {[
+                    { t: '→ Materijalni tok', b: '#1a1a1a', o: 'Fizički tok materijala (crna puna strijela)' },
+                    { t: '→ Push strijela', b: '#ca8a04', o: 'Guranje materijala bez pull signala (narančasta)' },
+                    { t: '→ Pull (kanban)', b: '#dc2626', o: 'Povlačenje na temelju kanban signala (crvena isprekidana)' },
+                    { t: '→ Informacijski tok', b: '#1a7a5e', o: 'Ručni tok informacija (zelena isprekidana)' },
+                    { t: '⚡→ El. tok informacija', b: '#2563eb', o: 'ERP, email, EDI (plava sa ⚡)' },
+                    { t: '→ Povratne informacije', b: '#7c3aed', o: 'Povratna veza u procesu (ljubičasta)' },
+                  ].map(v => (
+                    <div key={v.t} className="flex items-center gap-3 bg-[#fafaf8] rounded-lg p-3">
+                      <div className="w-8 h-0.5 shrink-0" style={{backgroundColor: v.b}}></div>
+                      <div>
+                        <p className="text-xs font-bold" style={{color: v.b}}>{v.t}</p>
+                        <p className="text-[10px] text-[#9a9a9a]">{v.o}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              {/* Savjeti */}
+              <section>
+                <h3 className="text-sm font-bold text-[#1a1a1a] mb-3">💡 Savjeti za crtanje</h3>
+                <div className="space-y-2">
+                  {[
+                    'Počnite s Dobavljačem (lijevo) i Kupcem (desno)',
+                    'Procese dodajte s lijeva na desno — redoslijedom toka materijala',
+                    'Između procesa dodajte Zalihe (trokut) gdje se materijal nakuplja',
+                    'Informacijski tok crtajte odozgo — od Kupca prema Planiranju prema Procesima',
+                    'Kaizen bliceve dodajte na mjesta gdje vidite prilike za poboljšanje',
+                    'Vremensku liniju dodajte na dno — prikazuje VA vs NVA segmente',
+                    'Redovito spremajte — klik na "Spremi" u gornjem desnom kutu',
+                  ].map((s, i) => (
+                    <p key={i} className="text-xs text-[#5a5a5a] flex gap-2 bg-[#e8f5f0] rounded-lg p-2">
+                      <span className="text-[#1a7a5e] font-bold shrink-0">{i+1}.</span>{s}
+                    </p>
+                  ))}
+                </div>
+              </section>
+
+              <div className="text-center pt-2">
+                <a href="/alati/vodici/vsm" target="_blank" className="inline-flex items-center gap-2 text-sm font-semibold text-blue-700 hover:underline">
+                  <BookOpen size={14}/> Pročitaj kompletan VSM vodič →
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
