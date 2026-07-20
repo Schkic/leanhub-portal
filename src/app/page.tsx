@@ -91,7 +91,7 @@ export default function HomePage() {
               PREPORUČENO
             </div>
             <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#a8d5c5', marginBottom: 8 }}>PRO</p>
-            <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 36, color: 'white', marginBottom: 4 }}>€49,99</p>
+            <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 36, color: 'white', marginBottom: 4 }}>€29,99</p>
             <p style={{ fontSize: 13, color: '#a8d5c5', marginBottom: 24 }}>mjesečno</p>
             <ul style={{ listStyle: 'none', padding: 0, marginBottom: 28, display: 'flex', flexDirection: 'column', gap: 10 }}>
               {['Neograničeni auditi s pohranom', 'KPI dashboard s grafovima', 'Napredni PDF izvještaji', 'Svi Lean alati', 'Prioritetna podrška'].map(item => (
