@@ -4,6 +4,35 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { User } from 'lucide-react';
+import {
+  BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, ReferenceLine, PieChart, Pie, Cell, Legend
+} from 'recharts';
+
+// OEE kalkulacija
+const calcStrojAvg = (strojevi: any[]) => {
+  if (!Array.isArray(strojevi)) return 0;
+  const results = strojevi.map(stroj => {
+    if (!Array.isArray(stroj.smjene)) return 0;
+    const smjeneOEE = stroj.smjene.map((s: any) => {
+      const op = s.planirano - s.zastoji;
+      if (s.planirano <= 0 || op <= 0 || s.idealniTakt <= 0) return 0;
+      const A = Math.min((op / s.planirano) * 100, 100);
+      const P = Math.min(s.idealniTakt > 0 ? ((s.ukupnoKomada / (op / s.idealniTakt)) * 100) : 0, 100);
+      const Q = Math.min(s.ukupnoKomada > 0 ? ((s.dobriKomadi / s.ukupnoKomada) * 100) : 0, 100);
+      return (A / 100) * (P / 100) * (Q / 100) * 100;
+    }).filter((v: number) => v > 0);
+    return smjeneOEE.length > 0 ? smjeneOEE.reduce((a: number, b: number) => a + b, 0) / smjeneOEE.length : 0;
+  }).filter(v => v > 0);
+  return results.length > 0 ? +(results.reduce((a, b) => a + b, 0) / results.length).toFixed(1) : 0;
+};
+
+const getOEEColor = (oee: number) => {
+  if (oee >= 85) return '#1a7a5e';
+  if (oee >= 75) return '#16a34a';
+  if (oee >= 60) return '#ca8a04';
+  return '#dc2626';
+};
 
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null);
@@ -17,6 +46,12 @@ export default function DashboardPage() {
   const [recentVSM, setRecentVSM] = useState<any[]>([]);
   const [recentIshikawa, setRecentIshikawa] = useState<any[]>([]);
   const [recentSMED, setRecentSMED] = useState<any[]>([]);
+
+  // KPI grafovi podaci
+  const [oeeHistory, setOeeHistory] = useState<any[]>([]);
+  const [auditHistory, setAuditHistory] = useState<any[]>([]);
+  const [kaizenStats, setKaizenStats] = useState<any[]>([]);
+
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -30,7 +65,7 @@ export default function DashboardPage() {
         .from('profiles').select('*').eq('id', user.id).single();
       setProfile(profileData);
 
-      const [a, g, a3, z, o, k, v, ish, smed] = await Promise.all([
+      const [a, g, a3, z, o, k, v, ish, smed, oeeAll, auditAll, kaizenAll] = await Promise.all([
         supabase.from('audits_5s').select('id, created_at, firma, lokacija, total_score, datum').order('created_at', { ascending: false }).limit(2),
         supabase.from('gemba_walk').select('id, created_at, voditelj, lokacija, datum').order('created_at', { ascending: false }).limit(2),
         supabase.from('a3_obrazac').select('id, created_at, naslov, vlasnik, datum_otvaranja, odjel').order('created_at', { ascending: false }).limit(2),
@@ -40,6 +75,12 @@ export default function DashboardPage() {
         supabase.from('vsm_dijagram').select('id, created_at, naziv, elementi').order('created_at', { ascending: false }).limit(2),
         supabase.from('ishikawa').select('id, created_at, problem, odjel, datum').order('created_at', { ascending: false }).limit(2),
         supabase.from('smed').select('id, created_at, stroj, proces, datum, aktivnosti').order('created_at', { ascending: false }).limit(2),
+        // KPI povijest — zadnjih 12 OEE zapisa
+        supabase.from('oee_kalkulator').select('id, period, created_at, strojevi').eq('user_id', user.id).order('created_at', { ascending: true }).limit(12),
+        // 5S audit povijest
+        supabase.from('audits_5s').select('id, total_score, datum, created_at').eq('user_id', user.id).order('created_at', { ascending: true }).limit(12),
+        // Kaizen po statusu
+        supabase.from('kaizen_prijedlog').select('status').eq('user_id', user.id),
       ]);
 
       setRecentAudits(a.data || []);
@@ -51,6 +92,34 @@ export default function DashboardPage() {
       setRecentVSM(v.data || []);
       setRecentIshikawa(ish.data || []);
       setRecentSMED(smed.data || []);
+
+      // OEE graf podaci
+      const oeeGraf = (oeeAll.data || []).map((r: any) => ({
+        period: r.period || new Date(r.created_at).toLocaleDateString('hr-HR', { month: 'short', year: '2-digit' }),
+        OEE: calcStrojAvg(r.strojevi || []),
+        cilj: 85,
+      }));
+      setOeeHistory(oeeGraf);
+
+      // 5S Audit graf podaci
+      const auditGraf = (auditAll.data || []).map((r: any) => ({
+        datum: r.datum ? new Date(r.datum).toLocaleDateString('hr-HR', { month: 'short', year: '2-digit' }) : new Date(r.created_at).toLocaleDateString('hr-HR', { month: 'short', year: '2-digit' }),
+        rezultat: r.total_score,
+        cilj: 80,
+      }));
+      setAuditHistory(auditGraf);
+
+      // Kaizen po statusu
+      const statusCounts: Record<string, number> = {};
+      (kaizenAll.data || []).forEach((r: any) => {
+        statusCounts[r.status] = (statusCounts[r.status] || 0) + 1;
+      });
+      const COLORS: Record<string, string> = {
+        'Otvoreno': '#9a9a9a', 'U razmatranju': '#ca8a04', 'Odobreno': '#2563eb',
+        'U provedbi': '#7c3aed', 'Završeno': '#1a7a5e', 'Odbijeno': '#dc2626'
+      };
+      setKaizenStats(Object.entries(statusCounts).map(([name, value]) => ({ name, value, color: COLORS[name] || '#9a9a9a' })));
+
       setLoading(false);
     };
     getData();
@@ -79,6 +148,8 @@ export default function DashboardPage() {
   );
 
   const isPro = profile?.is_pro;
+  const latestOEE = oeeHistory.length > 0 ? oeeHistory[oeeHistory.length - 1].OEE : null;
+  const latestAudit = auditHistory.length > 0 ? auditHistory[auditHistory.length - 1].rezultat : null;
 
   const alati = [
     { href: '/alati/5s-audit',        icon: '📋', label: 'Novi 5S Audit',        opis: 'Provjera čistoće i organizacije.',    bg: 'bg-[#e8f5f0] text-[#1a7a5e]' },
@@ -161,8 +232,8 @@ export default function DashboardPage() {
       <div key={ish.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#fafaf8] transition-all">
         <div className="w-10 h-10 rounded-lg bg-red-50 text-red-600 flex items-center justify-center text-lg">🐟</div>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-bold truncate">{ish.problem || 'Bez opisa problema'}</div>
-          <div className="text-xs text-[#9a9a9a]">{ish.odjel || '—'} · {ish.datum ? new Date(ish.datum).toLocaleDateString('hr-HR') : ''}</div>
+          <div className="text-sm font-bold truncate">{ish.problem || 'Bez opisa'}</div>
+          <div className="text-xs text-[#9a9a9a]">{ish.odjel || '—'}</div>
         </div>
       </div>
     )},
@@ -171,7 +242,7 @@ export default function DashboardPage() {
         <div className="w-10 h-10 rounded-lg bg-yellow-50 text-yellow-600 flex items-center justify-center text-lg">⚡</div>
         <div className="flex-1 min-w-0">
           <div className="text-sm font-bold truncate">{s.stroj || 'Nenavedeni stroj'}</div>
-          <div className="text-xs text-[#9a9a9a]">{s.proces || '—'} · {s.datum ? new Date(s.datum).toLocaleDateString('hr-HR') : ''} · {Array.isArray(s.aktivnosti) ? s.aktivnosti.length : 0} aktivnosti</div>
+          <div className="text-xs text-[#9a9a9a]">{s.proces || '—'} · {Array.isArray(s.aktivnosti) ? s.aktivnosti.length : 0} aktivnosti</div>
         </div>
       </div>
     )},
@@ -179,16 +250,115 @@ export default function DashboardPage() {
 
   return (
     <div className="bg-[#fafaf8] min-h-screen">
-      <div className="max-w-[1100px] mx-auto px-6 py-12">
-        <div className="mb-10">
-          <h1 className="font-serif text-4xl text-[#1a1a1a] mb-2">
+      <div className="max-w-[1200px] mx-auto px-6 py-10">
+
+        <div className="mb-8">
+          <h1 className="font-serif text-4xl text-[#1a1a1a] mb-1">
             Dobrodošli, {user?.user_metadata?.full_name || 'Korisniče'}
           </h1>
           <p className="text-[#5a5a5a]">Vaš Lean upravljački centar</p>
         </div>
 
+        {/* ── KPI GRAFOVI ── */}
+        {(oeeHistory.length > 0 || auditHistory.length > 0 || kaizenStats.length > 0) && (
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <h2 className="text-sm font-bold text-[#9a9a9a] uppercase tracking-wider">📈 KPI Pregled</h2>
+            </div>
+            <div className="grid md:grid-cols-3 gap-4">
+
+              {/* OEE Graf */}
+              {oeeHistory.length > 0 && (
+                <div className="bg-white border border-[#e2e2e2] rounded-2xl p-5 col-span-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="text-xs font-bold text-[#5a5a5a] uppercase tracking-wider">OEE Trend</h3>
+                    {latestOEE !== null && (
+                      <span className="text-lg font-bold" style={{ color: getOEEColor(latestOEE) }}>{latestOEE}%</span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-[#9a9a9a] mb-3">Ukupna učinkovitost opreme</p>
+                  <ResponsiveContainer width="100%" height={130}>
+                    <BarChart data={oeeHistory} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false}/>
+                      <XAxis dataKey="period" fontSize={9} tick={{ fill: '#9a9a9a' }} tickLine={false} axisLine={false}/>
+                      <YAxis domain={[0, 100]} fontSize={9} tick={{ fill: '#9a9a9a' }} tickLine={false} axisLine={false}/>
+                      <Tooltip formatter={(v: any) => [`${v}%`]} contentStyle={{ borderRadius: 8, border: '1px solid #e2e2e2', fontSize: 11 }}/>
+                      <ReferenceLine y={85} stroke="#1a7a5e" strokeDasharray="4 2" strokeWidth={1.5}/>
+                      <Bar dataKey="OEE" radius={[3,3,0,0]}>
+                        {oeeHistory.map((entry, i) => (
+                          <Cell key={i} fill={getOEEColor(entry.OEE)}/>
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                  <div className="flex items-center gap-1 mt-1">
+                    <div className="w-6 h-px border-t border-dashed border-[#1a7a5e]"></div>
+                    <span className="text-[10px] text-[#9a9a9a]">Cilj 85%</span>
+                  </div>
+                </div>
+              )}
+
+              {/* 5S Audit Graf */}
+              {auditHistory.length > 0 && (
+                <div className="bg-white border border-[#e2e2e2] rounded-2xl p-5 col-span-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="text-xs font-bold text-[#5a5a5a] uppercase tracking-wider">5S Audit Trend</h3>
+                    {latestAudit !== null && (
+                      <span className="text-lg font-bold text-[#1a7a5e]">{latestAudit}/100</span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-[#9a9a9a] mb-3">Rezultati audita kroz vrijeme</p>
+                  <ResponsiveContainer width="100%" height={130}>
+                    <LineChart data={auditHistory} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false}/>
+                      <XAxis dataKey="datum" fontSize={9} tick={{ fill: '#9a9a9a' }} tickLine={false} axisLine={false}/>
+                      <YAxis domain={[0, 100]} fontSize={9} tick={{ fill: '#9a9a9a' }} tickLine={false} axisLine={false}/>
+                      <Tooltip formatter={(v: any) => [`${v}/100`]} contentStyle={{ borderRadius: 8, border: '1px solid #e2e2e2', fontSize: 11 }}/>
+                      <ReferenceLine y={80} stroke="#1a7a5e" strokeDasharray="4 2" strokeWidth={1.5}/>
+                      <Line type="monotone" dataKey="rezultat" stroke="#1a7a5e" strokeWidth={2.5} dot={{ r: 4, fill: '#1a7a5e' }} activeDot={{ r: 6 }}/>
+                    </LineChart>
+                  </ResponsiveContainer>
+                  <div className="flex items-center gap-1 mt-1">
+                    <div className="w-6 h-px border-t border-dashed border-[#1a7a5e]"></div>
+                    <span className="text-[10px] text-[#9a9a9a]">Cilj 80/100</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Kaizen Status Graf */}
+              {kaizenStats.length > 0 && (
+                <div className="bg-white border border-[#e2e2e2] rounded-2xl p-5 col-span-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="text-xs font-bold text-[#5a5a5a] uppercase tracking-wider">Kaizen Prijedlozi</h3>
+                    <span className="text-lg font-bold text-[#1a7a5e]">{kaizenStats.reduce((a, b) => a + b.value, 0)}</span>
+                  </div>
+                  <p className="text-[10px] text-[#9a9a9a] mb-3">Status prijedloga poboljšanja</p>
+                  <ResponsiveContainer width="100%" height={110}>
+                    <PieChart>
+                      <Pie data={kaizenStats} cx="50%" cy="50%" outerRadius={50} dataKey="value" paddingAngle={2}>
+                        {kaizenStats.map((entry, i) => <Cell key={i} fill={entry.color}/>)}
+                      </Pie>
+                      <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid #e2e2e2', fontSize: 11 }}/>
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">
+                    {kaizenStats.map(k => (
+                      <div key={k.name} className="flex items-center gap-1">
+                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: k.color }}></div>
+                        <span className="text-[10px] text-[#9a9a9a]">{k.name} ({k.value})</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="grid md:grid-cols-3 gap-6">
           <div className="md:col-span-2 space-y-6">
+
+            {/* Alati grid */}
             <div className="grid grid-cols-3 gap-3">
               {alati.map(a => (
                 <a key={a.href} href={a.href} className="bg-white border border-[#e2e2e2] p-4 rounded-2xl hover:border-[#1a7a5e] hover:shadow-lg transition-all group">
@@ -199,6 +369,7 @@ export default function DashboardPage() {
               ))}
             </div>
 
+            {/* Nedavni zapisi */}
             {recentSections.filter(s => s.data.length > 0).map(section => (
               <div key={section.title} className="bg-white border border-[#e2e2e2] rounded-2xl p-6">
                 <div className="flex justify-between items-center mb-4">
@@ -210,6 +381,7 @@ export default function DashboardPage() {
             ))}
           </div>
 
+          {/* Status sidebar */}
           <div>
             <div className="bg-white border border-[#e2e2e2] rounded-2xl p-6">
               <h3 className="text-xs font-bold text-[#9a9a9a] uppercase tracking-wider mb-4">Vaš status</h3>
