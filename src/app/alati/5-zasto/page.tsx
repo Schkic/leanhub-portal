@@ -42,8 +42,8 @@ export default function PetZastoPage() {
   const [sumPotpis, setSumPotpis] = useState('');
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) router.push('/prijava');
+    requireAuth(router).then(user => {
+  if (!user) return;
       else setUser(user);
     });
     setDatum(new Date().toISOString().split('T')[0]);
