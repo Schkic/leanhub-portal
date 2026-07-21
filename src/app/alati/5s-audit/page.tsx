@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Save, Info, Loader2, CheckCircle2, FileDown } from 'lucide-react';
 import jsPDF from 'jspdf';
-import { supabase } from '@/lib/supabase';
+import { supabase, requireAuth } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 
 const auditData = [
@@ -82,7 +82,7 @@ export default function Smart5SAudit() {
   const [obs, setObs] = useState({ pozitivno: '', poboljsanje: '', akcije: '', sljedeci: '', potpis: '' });
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => setUser(user));
+    requireAuth(router).then(user => { if (!user) return; setUser(user); });
   }, []);
 
   const handleRate = (id: string, val: number) => setScores(prev => ({ ...prev, [id]: val }));
@@ -100,7 +100,7 @@ export default function Smart5SAudit() {
   const colors = getScoreColor(totalScore);
 
   const saveToPortal = async () => {
-    if (!user) { alert('Morate biti prijavljeni.'); router.push('/prijava'); return; }
+    if (!user) { router.push('/auth/wall'); return; }
     setIsSaving(true);
     try {
       const { error } = await supabase.from('audits_5s').insert([{
@@ -394,12 +394,7 @@ export default function Smart5SAudit() {
       </div>
 
       <div className="form-wrap">
-        {!user && (
-          <div className="bg-[#fff5f5] border border-[#feb2b2] p-4 rounded-xl flex gap-3 text-sm text-[#c53030] mb-8">
-            <Info size={20} className="shrink-0" />
-            <p>Trenutno niste prijavljeni. Možete ispuniti audit, ali nećete ga moći spremiti dok se ne <a href="/prijava" className="font-bold underline">prijavite</a>.</p>
-          </div>
-        )}
+
 
         <div className="meta-section">
           <h3>Podaci o auditu</h3>
