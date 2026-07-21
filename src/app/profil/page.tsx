@@ -63,6 +63,9 @@ export default function ProfilPage() {
   );
 
   const isPro = profile?.is_pro;
+  const trialDaysLeft = profile?.trial_ends_at
+    ? Math.max(0, Math.ceil((new Date(profile.trial_ends_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : null;
 
   return (
     <div className="bg-[#fafaf8] min-h-screen">
@@ -122,10 +125,15 @@ export default function ProfilPage() {
             <div className="space-y-4">
               <div className="flex justify-between items-center py-2 border-b border-[#f0f0f0]">
                 <span className="text-sm text-[#5a5a5a]">Trenutni plan</span>
-                <span className="text-sm font-bold text-[#9a9a9a]">Probni period</span>
+                <span className="text-sm font-bold text-[#9a9a9a]">
+                  Probni period{trialDaysLeft !== null && ` — još ${trialDaysLeft} ${trialDaysLeft === 1 ? 'dan' : 'dana'}`}
+                </span>
               </div>
               <p className="text-sm text-[#5a5a5a] leading-relaxed">
-                Isprobajte sve PRO funkcije <strong>besplatno 14 dana</strong>. Otkažite kad god želite.
+                {trialDaysLeft !== null
+                  ? <>Preostalo vam je <strong>{trialDaysLeft} {trialDaysLeft === 1 ? 'dan' : 'dana'}</strong> probnog perioda. Otkažite kad god želite.</>
+                  : <>Isprobajte sve PRO funkcije <strong>besplatno 14 dana</strong>. Otkažite kad god želite.</>
+                }
               </p>
 
               <div className="flex gap-2 p-1 bg-[#fafaf8] border border-[#e2e2e2] rounded-xl">

@@ -47,7 +47,7 @@ export default function WallPage() {
         {/* Trial badge */}
         <div className="bg-[#e8f5f0] border border-[#1a7a5e]/20 rounded-xl px-4 py-3 mb-6">
           <p className="text-sm font-bold text-[#1a7a5e]">🎁 14 dana besplatno — bez kartice</p>
-          <p className="text-xs text-[#5a5a5a] mt-0.5">Nakon triala €29,99/mj. Otkažite kad god želite.</p>
+          <p className="text-xs text-[#5a5a5a] mt-0.5">Nakon triala €29,99/mj ili €299,99/god. Otkažite kad god želite.</p>
         </div>
 
         {/* Gumbi */}

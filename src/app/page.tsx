@@ -29,7 +29,7 @@ export default function HomePage() {
           <a href="https://leanopedija.hr" style={{ color: '#1a7a5e' }}>leanopedija.hr</a>
         </p>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#e8f5f0', color: '#1a7a5e', padding: '8px 16px', borderRadius: 20, fontSize: 13, fontWeight: 600, marginTop: 16 }}>
-          🎁 1 mjesec besplatno, zatim €29,99/mj — otkažite unutar 30 dana
+          🎁 14 dana besplatno — zatim €29,99/mj ili €299,99/god
         </div>
       </section>
 
@@ -92,7 +92,8 @@ export default function HomePage() {
             </div>
             <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#a8d5c5', marginBottom: 8 }}>PRO</p>
             <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 36, color: 'white', marginBottom: 4 }}>€29,99</p>
-            <p style={{ fontSize: 13, color: '#a8d5c5', marginBottom: 24 }}>mjesečno</p>
+            <p style={{ fontSize: 13, color: '#a8d5c5', marginBottom: 4 }}>mjesečno</p>
+            <p style={{ fontSize: 12, color: '#a8d5c5', marginBottom: 24 }}>ili €299,99 godišnje</p>
             <ul style={{ listStyle: 'none', padding: 0, marginBottom: 28, display: 'flex', flexDirection: 'column', gap: 10 }}>
               {['Neograničeni auditi s pohranom', 'KPI dashboard s grafovima', 'Napredni PDF izvještaji', 'Svi Lean alati', 'Prioritetna podrška'].map(item => (
                 <li key={item} style={{ fontSize: 13, color: 'white', display: 'flex', alignItems: 'center', gap: 8 }}>
