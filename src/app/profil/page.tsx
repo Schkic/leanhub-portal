@@ -5,11 +5,15 @@ import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { User, LogOut, CreditCard, Shield, AlertTriangle } from 'lucide-react';
 
+// TODO: uskladi s tvojim stvarnim godišnjim Price-om u Stripeu
+const ANNUAL_PRICE_LABEL = '€299,99';
+
 export default function ProfilPage() {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [canceling, setCanceling] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'annual'>('monthly');
   const router = useRouter();
 
   useEffect(() => {
@@ -35,7 +39,7 @@ export default function ProfilPage() {
     const res = await fetch('/api/stripe/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_id: user.id, email: user.email }),
+      body: JSON.stringify({ user_id: user.id, email: user.email, plan: selectedPlan }),
     });
     const data = await res.json();
     if (data.url) window.location.href = data.url;
@@ -92,7 +96,9 @@ export default function ProfilPage() {
               </div>
               <div className="flex justify-between items-center py-2 border-b border-[#f0f0f0]">
                 <span className="text-sm text-[#5a5a5a]">Cijena</span>
-                <span className="text-sm font-semibold">€29,99 / mjesec</span>
+                <span className="text-sm font-semibold">
+                  {profile?.plan_interval === 'annual' ? `${ANNUAL_PRICE_LABEL} / godina` : '€29,99 / mjesec'}
+                </span>
               </div>
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mt-4">
                 <div className="flex gap-3">
@@ -113,10 +119,26 @@ export default function ProfilPage() {
                 <span className="text-sm font-bold text-[#9a9a9a]">Probni period</span>
               </div>
               <p className="text-sm text-[#5a5a5a] leading-relaxed">
-                Isprobajte sve PRO funkcije <strong>besplatno 1 mjesec</strong>. Nakon toga €29,99/mj. Otkažite kad god želite.
+                Isprobajte sve PRO funkcije <strong>besplatno 14 dana</strong>. Otkažite kad god želite.
               </p>
+
+              <div className="flex gap-2 p-1 bg-[#fafaf8] border border-[#e2e2e2] rounded-xl">
+                <button
+                  onClick={() => setSelectedPlan('monthly')}
+                  className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${selectedPlan === 'monthly' ? 'bg-white shadow text-[#1a7a5e]' : 'text-[#5a5a5a]'}`}
+                >
+                  Mjesečno<br /><span className="text-xs font-normal">€29,99/mj</span>
+                </button>
+                <button
+                  onClick={() => setSelectedPlan('annual')}
+                  className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${selectedPlan === 'annual' ? 'bg-white shadow text-[#1a7a5e]' : 'text-[#5a5a5a]'}`}
+                >
+                  Godišnje<br /><span className="text-xs font-normal">{ANNUAL_PRICE_LABEL}/god</span>
+                </button>
+              </div>
+
               <button onClick={handleUpgrade} className="w-full py-3 bg-[#1a7a5e] text-white font-bold rounded-xl hover:bg-[#155f49] transition-all">
-                Aktiviraj PRO — 1 mj. besplatno →
+                Aktiviraj PRO — 14 dana besplatno →
               </button>
             </div>
           )}
