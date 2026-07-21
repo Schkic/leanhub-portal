@@ -53,6 +53,7 @@ export default function DashboardPage() {
   const [kaizenStats, setKaizenStats] = useState<any[]>([]);
 
   const [loading, setLoading] = useState(true);
+  const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'annual'>('monthly');
   const router = useRouter();
 
   useEffect(() => {
@@ -75,11 +76,8 @@ export default function DashboardPage() {
         supabase.from('vsm_dijagram').select('id, created_at, naziv, elementi').order('created_at', { ascending: false }).limit(2),
         supabase.from('ishikawa').select('id, created_at, problem, odjel, datum').order('created_at', { ascending: false }).limit(2),
         supabase.from('smed').select('id, created_at, stroj, proces, datum, aktivnosti').order('created_at', { ascending: false }).limit(2),
-        // KPI povijest — zadnjih 12 OEE zapisa
         supabase.from('oee_kalkulator').select('id, period, created_at, strojevi').eq('user_id', user.id).order('created_at', { ascending: true }).limit(12),
-        // 5S audit povijest
         supabase.from('audits_5s').select('id, total_score, datum, created_at').eq('user_id', user.id).order('created_at', { ascending: true }).limit(12),
-        // Kaizen po statusu
         supabase.from('kaizen_prijedlog').select('status').eq('user_id', user.id),
       ]);
 
@@ -93,7 +91,6 @@ export default function DashboardPage() {
       setRecentIshikawa(ish.data || []);
       setRecentSMED(smed.data || []);
 
-      // OEE graf podaci
       const oeeGraf = (oeeAll.data || []).map((r: any) => ({
         period: r.period || new Date(r.created_at).toLocaleDateString('hr-HR', { month: 'short', year: '2-digit' }),
         OEE: calcStrojAvg(r.strojevi || []),
@@ -101,7 +98,6 @@ export default function DashboardPage() {
       }));
       setOeeHistory(oeeGraf);
 
-      // 5S Audit graf podaci
       const auditGraf = (auditAll.data || []).map((r: any) => ({
         datum: r.datum ? new Date(r.datum).toLocaleDateString('hr-HR', { month: 'short', year: '2-digit' }) : new Date(r.created_at).toLocaleDateString('hr-HR', { month: 'short', year: '2-digit' }),
         rezultat: r.total_score,
@@ -109,7 +105,6 @@ export default function DashboardPage() {
       }));
       setAuditHistory(auditGraf);
 
-      // Kaizen po statusu
       const statusCounts: Record<string, number> = {};
       (kaizenAll.data || []).forEach((r: any) => {
         statusCounts[r.status] = (statusCounts[r.status] || 0) + 1;
@@ -129,7 +124,7 @@ export default function DashboardPage() {
     const res = await fetch('/api/stripe/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_id: user.id, email: user.email }),
+      body: JSON.stringify({ user_id: user.id, email: user.email, plan: selectedPlan }),
     });
     const data = await res.json();
     if (data.url) window.location.href = data.url;
@@ -259,7 +254,6 @@ export default function DashboardPage() {
           <p className="text-[#5a5a5a]">Vaš Lean upravljački centar</p>
         </div>
 
-        {/* ── KPI GRAFOVI ── */}
         {(oeeHistory.length > 0 || auditHistory.length > 0 || kaizenStats.length > 0) && (
           <div className="mb-8">
             <div className="flex items-center gap-2 mb-4">
@@ -267,7 +261,6 @@ export default function DashboardPage() {
             </div>
             <div className="grid md:grid-cols-3 gap-4">
 
-              {/* OEE Graf */}
               {oeeHistory.length > 0 && (
                 <div className="bg-white border border-[#e2e2e2] rounded-2xl p-5 col-span-1">
                   <div className="flex items-center justify-between mb-1">
@@ -298,7 +291,6 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              {/* 5S Audit Graf */}
               {auditHistory.length > 0 && (
                 <div className="bg-white border border-[#e2e2e2] rounded-2xl p-5 col-span-1">
                   <div className="flex items-center justify-between mb-1">
@@ -325,7 +317,6 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              {/* Kaizen Status Graf */}
               {kaizenStats.length > 0 && (
                 <div className="bg-white border border-[#e2e2e2] rounded-2xl p-5 col-span-1">
                   <div className="flex items-center justify-between mb-1">
@@ -358,7 +349,6 @@ export default function DashboardPage() {
         <div className="grid md:grid-cols-3 gap-6">
           <div className="md:col-span-2 space-y-6">
 
-            {/* Alati grid */}
             <div className="grid grid-cols-3 gap-3">
               {alati.map(a => (
                 <a key={a.href} href={a.href} className="bg-white border border-[#e2e2e2] p-4 rounded-2xl hover:border-[#1a7a5e] hover:shadow-lg transition-all group">
@@ -369,7 +359,6 @@ export default function DashboardPage() {
               ))}
             </div>
 
-            {/* Nedavni zapisi */}
             {recentSections.filter(s => s.data.length > 0).map(section => (
               <div key={section.title} className="bg-white border border-[#e2e2e2] rounded-2xl p-6">
                 <div className="flex justify-between items-center mb-4">
@@ -381,7 +370,6 @@ export default function DashboardPage() {
             ))}
           </div>
 
-          {/* Status sidebar */}
           <div>
             <div className="bg-white border border-[#e2e2e2] rounded-2xl p-6">
               <h3 className="text-xs font-bold text-[#9a9a9a] uppercase tracking-wider mb-4">Vaš status</h3>
@@ -403,10 +391,24 @@ export default function DashboardPage() {
               ) : (
                 <div className="space-y-3">
                   <p className="text-xs text-[#5a5a5a] leading-relaxed">
-                    Isprobajte sve PRO funkcije <strong>besplatno 1 mjesec</strong>. Nakon toga €29,99/mj. Otkažite kad god želite.
+                    Isprobajte sve PRO funkcije <strong>besplatno 14 dana</strong>. Otkažite kad god želite.
                   </p>
+                  <div className="flex gap-1 p-1 bg-[#fafaf8] border border-[#e2e2e2] rounded-lg">
+                    <button
+                      onClick={() => setSelectedPlan('monthly')}
+                      className={`flex-1 py-1.5 text-[11px] font-semibold rounded-md transition-all ${selectedPlan === 'monthly' ? 'bg-white shadow text-[#1a7a5e]' : 'text-[#5a5a5a]'}`}
+                    >
+                      Mjesečno
+                    </button>
+                    <button
+                      onClick={() => setSelectedPlan('annual')}
+                      className={`flex-1 py-1.5 text-[11px] font-semibold rounded-md transition-all ${selectedPlan === 'annual' ? 'bg-white shadow text-[#1a7a5e]' : 'text-[#5a5a5a]'}`}
+                    >
+                      Godišnje
+                    </button>
+                  </div>
                   <button onClick={handleUpgrade} className="w-full py-2.5 bg-[#1a7a5e] text-white text-sm font-bold rounded-xl hover:bg-[#155f49] transition-all">
-                    Aktiviraj PRO — 1 mj. besplatno →
+                    Aktiviraj PRO — 14 dana besplatno →
                   </button>
                 </div>
               )}
