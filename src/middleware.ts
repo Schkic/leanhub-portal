@@ -26,14 +26,27 @@ export async function middleware(req: NextRequest) {
   const { data: { session } } = await supabase.auth.getSession();
   const { pathname } = req.nextUrl;
 
-  const publicRoutes = ['/', '/prijava', '/registracija', '/auth/wall', '/auth/expired'];
-  const isPublic = publicRoutes.some(r => pathname === r) || pathname.startsWith('/api/stripe');
+  // Prijavljen korisnik na auth stranicama → preusmjeri na dashboard
+  if (session && (pathname === '/auth/wall' || pathname === '/prijava' || pathname === '/registracija' || pathname === '/')) {
+    return NextResponse.redirect(new URL('/dashboard', req.url));
+  }
 
+  // Javne rute — bez provjere
+  const isPublic =
+    pathname === '/' ||
+    pathname === '/prijava' ||
+    pathname === '/registracija' ||
+    pathname === '/auth/wall' ||
+    pathname === '/auth/expired' ||
+    pathname.startsWith('/api/stripe');
+
+  // Nije prijavljen → wall stranica
   if (!session && !isPublic) {
     return NextResponse.redirect(new URL('/auth/wall', req.url));
   }
 
-  if (session && !isPublic) {
+  // Prijavljen → provjeri trial/pro status
+  if (session && !isPublic && pathname !== '/profil') {
     const { data: profile } = await supabase
       .from('profiles')
       .select('is_pro, trial_ends_at')
@@ -41,9 +54,11 @@ export async function middleware(req: NextRequest) {
       .single();
 
     const isPro = profile?.is_pro;
-    const trialActive = profile?.trial_ends_at && new Date(profile.trial_ends_at) > new Date();
+    const trialActive = profile?.trial_ends_at
+      ? new Date(profile.trial_ends_at) > new Date()
+      : false;
 
-    if (!isPro && !trialActive && pathname !== '/auth/expired' && pathname !== '/profil') {
+    if (!isPro && !trialActive && pathname !== '/auth/expired') {
       return NextResponse.redirect(new URL('/auth/expired', req.url));
     }
   }
