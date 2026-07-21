@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, requireAuth } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { Plus, Trash2, Save, Loader2 } from 'lucide-react';
 
@@ -43,8 +43,8 @@ export default function PetZastoPage() {
 
   useEffect(() => {
     requireAuth(router).then(user => {
-  if (!user) return;
-      else setUser(user);
+      if (!user) return;
+      setUser(user);
     });
     setDatum(new Date().toISOString().split('T')[0]);
   }, [router]);

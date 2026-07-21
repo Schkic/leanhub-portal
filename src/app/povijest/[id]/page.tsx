@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, requireAuth } from '@/lib/supabase';
 import { useParams, useRouter } from 'next/navigation';
 import { Loader2, ArrowLeft, Calendar, Building2, MapPin, CheckCircle2, AlertCircle, FileText } from 'lucide-react';
 
@@ -13,6 +13,9 @@ export default function AuditDetailsPage() {
 
   useEffect(() => {
     const fetchDetails = async () => {
+      const user = await requireAuth(router);
+      if (!user) return;
+
       const { data, error } = await supabase
         .from('audits_5s')
         .select('*')

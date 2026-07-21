@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, requireAuth } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { Plus, Trash2, Save, Loader2 } from 'lucide-react';
 
@@ -42,9 +42,9 @@ export default function SMEDPage() {
   const [napomena, setNapomena] = useState('');
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) router.push('/prijava');
-      else setUser(user);
+    requireAuth(router).then(user => {
+      if (!user) return;
+      setUser(user);
     });
     setDatum(new Date().toISOString().split('T')[0]);
   }, [router]);

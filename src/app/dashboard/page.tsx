@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, requireAuth } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { User } from 'lucide-react';
 import {
@@ -57,8 +57,8 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const getData = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/prijava'); return; }
+      const user = await requireAuth(router);
+      if (!user) return;
       setUser(user);
 
       const { data: profileData } = await supabase

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, requireAuth } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { Save, Loader2, Trash2, Plus, X, ChevronDown, ChevronUp, HelpCircle, BookOpen } from 'lucide-react';
 
@@ -246,9 +246,9 @@ export default function VSMPage() {
   const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) router.push('/prijava');
-      else setUser(user);
+    requireAuth(router).then(user => {
+      if (!user) return;
+      setUser(user);
     });
   }, [router]);
 

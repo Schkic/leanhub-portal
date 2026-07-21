@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, requireAuth } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
@@ -61,8 +61,8 @@ export default function OEEDetailPage({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     const fetch = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/prijava'); return; }
+      const user = await requireAuth(router);
+      if (!user) return;
 
       // Dohvati ovaj zapis
       const { data } = await supabase.from('oee_kalkulator')

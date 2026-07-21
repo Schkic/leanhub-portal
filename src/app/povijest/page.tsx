@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, requireAuth } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { Calendar, MapPin, ChevronRight, Loader2, Info } from 'lucide-react';
 
@@ -21,8 +21,8 @@ export default function HistoryPage() {
 
   useEffect(() => {
     const fetchAll = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/prijava'); return; }
+      const user = await requireAuth(router);
+      if (!user) return;
 
       const [a, g, a3, z, o, k, v, ish, smed] = await Promise.all([
         supabase.from('audits_5s').select('id, created_at, firma, lokacija, total_score, datum').order('created_at', { ascending: false }),
