@@ -26,10 +26,12 @@ export async function POST(req: NextRequest) {
     const userId = session.metadata?.user_id
 
     if (userId) {
+      const plan = session.metadata?.plan === 'annual' ? 'annual' : 'monthly'
       await supabase.from('profiles').update({
         is_pro: true,
         stripe_customer_id: session.customer as string,
         stripe_subscription_id: session.subscription as string,
+        plan_interval: plan,
       }).eq('id', userId)
     }
   }
@@ -39,6 +41,7 @@ export async function POST(req: NextRequest) {
     await supabase.from('profiles').update({
       is_pro: false,
       stripe_subscription_id: null,
+      plan_interval: null,
     }).eq('stripe_customer_id', subscription.customer as string)
   }
 
