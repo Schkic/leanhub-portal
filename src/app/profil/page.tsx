@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import { User, LogOut, CreditCard, Shield, AlertTriangle } from 'lucide-react';
+import { User, LogOut, CreditCard, Shield } from 'lucide-react';
 
 // TODO: uskladi s tvojim stvarnim godišnjim Price-om u Stripeu
 const ANNUAL_PRICE_LABEL = '€299,99';
@@ -43,6 +43,17 @@ export default function ProfilPage() {
     });
     const data = await res.json();
     if (data.url) window.location.href = data.url;
+  };
+
+  const handleManageSubscription = async () => {
+    const res = await fetch('/api/stripe/portal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ customer_id: profile.stripe_customer_id }),
+    });
+    const data = await res.json();
+    if (data.url) window.location.href = data.url;
+    else alert(data.error || 'Nešto je pošlo po zlu, pokušajte ponovno.');
   };
 
   if (loading) return (
@@ -100,17 +111,12 @@ export default function ProfilPage() {
                   {profile?.plan_interval === 'annual' ? `${ANNUAL_PRICE_LABEL} / godina` : '€29,99 / mjesec'}
                 </span>
               </div>
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mt-4">
-                <div className="flex gap-3">
-                  <AlertTriangle size={18} className="text-amber-600 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-semibold text-amber-800 mb-1">Otkazivanje pretplate</p>
-                    <p className="text-xs text-amber-700 leading-relaxed">
-                      Za otkazivanje pretplate kontaktirajte nas na <a href="mailto:info@opticora.hr" className="underline font-semibold">info@opticora.hr</a>. Otkazivanje je moguće u bilo kojem trenutku, a pristup ostaje aktivan do kraja plaćenog perioda.
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <button onClick={handleManageSubscription} className="w-full py-3 bg-white border border-[#e2e2e2] text-[#1a1a1a] font-bold rounded-xl hover:bg-[#fafaf8] transition-all">
+                Upravljaj pretplatom →
+              </button>
+              <p className="text-xs text-[#9a9a9a] text-center">
+                Promijenite plan (mjesečno/godišnje), ažurirajte karticu ili otkažite pretplatu.
+              </p>
             </div>
           ) : (
             <div className="space-y-4">
