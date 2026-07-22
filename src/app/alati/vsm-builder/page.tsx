@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase, requireAuth } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import { Save, Loader2, Trash2, Plus, X, ChevronDown, ChevronUp, HelpCircle, BookOpen } from 'lucide-react';
+import { Save, Loader2, Trash2, Plus, X, ChevronDown, ChevronUp, HelpCircle, BookOpen, Image as ImageIcon } from 'lucide-react';
 
 type ElementType = 'supplier' | 'customer' | 'process' | 'inventory' | 'transport' |
   'supermarket' | 'kaizen' | 'control' | 'fifo' | 'operator' |
@@ -243,7 +243,17 @@ export default function VSMPage() {
   const [showKonToolbar, setShowKonToolbar] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ Proces: true, Materijal: true, Kanban: false, Ostalo: false });
+  const [showTakt, setShowTakt] = useState(false);
+  const [raspVrijeme, setRaspVrijeme] = useState('27600');
+  const [potraznja, setPotraznja] = useState('500');
   const svgRef = useRef<SVGSVGElement>(null);
+
+  const takt = (() => {
+    const avail = parseFloat(raspVrijeme);
+    const demand = parseFloat(potraznja);
+    if (!avail || !demand) return null;
+    return +(avail / demand).toFixed(1);
+  })();
 
   useEffect(() => {
     requireAuth(router).then(user => {
@@ -327,6 +337,59 @@ export default function VSMPage() {
     if (!error) setSaved(true);
   };
 
+  const exportPNG = () => {
+    const svg = svgRef.current;
+    if (!svg || elements.length === 0) { alert('Dodajte barem jedan element prije izvoza.'); return; }
+
+    const PAD = 40;
+    const minX = Math.min(...elements.map(e => e.x)) - PAD;
+    const minY = Math.min(...elements.map(e => e.y)) - PAD;
+    const maxX = Math.max(...elements.map(e => e.x + ELEMENT_DEFS[e.type].w)) + PAD;
+    const maxY = Math.max(...elements.map(e => e.y + ELEMENT_DEFS[e.type].h)) + PAD;
+    const w = maxX - minX;
+    const h = maxY - minY;
+
+    const clone = svg.cloneNode(true) as SVGSVGElement;
+    clone.setAttribute('width', String(w));
+    clone.setAttribute('height', String(h));
+    clone.setAttribute('viewBox', `${minX} ${minY} ${w} ${h}`);
+    clone.removeAttribute('style');
+
+    const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    bgRect.setAttribute('x', String(minX));
+    bgRect.setAttribute('y', String(minY));
+    bgRect.setAttribute('width', String(w));
+    bgRect.setAttribute('height', String(h));
+    bgRect.setAttribute('fill', '#fafaf8');
+    clone.insertBefore(bgRect, clone.firstChild);
+
+    const svgData = new XMLSerializer().serializeToString(clone);
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(svgBlob);
+
+    const img = new window.Image();
+    img.onload = () => {
+      const scale = 2;
+      const canvas = document.createElement('canvas');
+      canvas.width = w * scale;
+      canvas.height = h * scale;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.scale(scale, scale);
+        ctx.drawImage(img, 0, 0, w, h);
+        canvas.toBlob(blob => {
+          if (!blob) return;
+          const link = document.createElement('a');
+          link.download = `VSM-${naziv.replace(/\s+/g, '-')}-${new Date().toISOString().slice(0, 10)}.png`;
+          link.href = URL.createObjectURL(blob);
+          link.click();
+        });
+      }
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
+  };
+
   const selectedEl = elements.find(e => e.id === selected);
   const selectedDef = selectedEl ? ELEMENT_DEFS[selectedEl.type] : null;
 
@@ -342,6 +405,10 @@ export default function VSMPage() {
             {saving ? 'Spremam...' : 'Spremi'}
           </button>
           {saved && <span className="text-sm text-[#1a7a5e] font-semibold self-center">✅</span>}
+          <button onClick={exportPNG}
+            className="flex items-center gap-2 border border-[#e2e2e2] text-[#5a5a5a] px-3 py-2 rounded-lg text-sm font-semibold hover:bg-[#e8f5f0] hover:text-[#1a7a5e] transition-all">
+            <ImageIcon size={16}/> Preuzmi PNG
+          </button>
           <button onClick={() => setShowHelp(true)}
             className="flex items-center gap-2 border border-[#e2e2e2] text-[#5a5a5a] px-3 py-2 rounded-lg text-sm font-semibold hover:bg-[#e8f5f0] hover:text-[#1a7a5e] transition-all">
             <HelpCircle size={16}/> Upute
@@ -380,6 +447,26 @@ export default function VSMPage() {
                 )}
               </div>
             ))}
+
+            <div className="border-t border-[#e2e2e2] pt-2">
+              <button onClick={() => setShowTakt(!showTakt)}
+                className="w-full flex items-center justify-between px-2 py-1.5 text-[10px] font-bold text-[#9a9a9a] uppercase tracking-wider hover:text-[#1a1a1a]">
+                ⏱️ Takt vrijeme {showTakt ? <ChevronUp size={10}/> : <ChevronDown size={10}/>}
+              </button>
+              {showTakt && (
+                <div className="px-2 py-2 space-y-2">
+                  <div>
+                    <label className="block text-[10px] font-medium text-[#5a5a5a] mb-1">Raspoloživo vrijeme (sek/smjena)</label>
+                    <input type="number" className="w-full px-2 py-1.5 border border-[#e2e2e2] rounded-lg text-xs focus:border-[#1a7a5e] outline-none bg-[#fafaf8]" value={raspVrijeme} onChange={e => setRaspVrijeme(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-medium text-[#5a5a5a] mb-1">Dnevna potražnja (kom/dan)</label>
+                    <input type="number" className="w-full px-2 py-1.5 border border-[#e2e2e2] rounded-lg text-xs focus:border-[#1a7a5e] outline-none bg-[#fafaf8]" value={potraznja} onChange={e => setPotraznja(e.target.value)} />
+                  </div>
+                  <div className="takt-out">{takt !== null ? `Takt: ${takt} sek/kom` : 'Takt: —'}</div>
+                </div>
+              )}
+            </div>
 
             <div className="border-t border-[#e2e2e2] pt-2">
               <button onClick={() => setShowKonToolbar(!showKonToolbar)}
