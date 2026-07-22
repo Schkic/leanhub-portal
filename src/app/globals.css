@@ -198,3 +198,36 @@ body {
 @media (max-width: 768px) {
   .action-row, .action-header { grid-template-columns: 1fr 1fr; }
 }
+
+/* A3 — CARDS */
+.card { background: var(--white); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 16px; overflow: hidden; }
+.card-header { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; background: #fafaf8; }
+.card-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+.card-header h3 { font-size: 14px; font-weight: 600; }
+.card-header p { font-size: 12px; color: var(--text-faint); margin-top: 1px; }
+.card-step { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--green); background: var(--green-light); padding: 2px 8px; border-radius: 10px; margin-left: auto; flex-shrink: 0; }
+.card-body { padding: 18px; }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+
+.info-box { background: var(--green-light); border-left: 3px solid var(--green); padding: 10px 14px; border-radius: 0 6px 6px 0; font-size: 12px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.6; }
+
+/* A3 — 5x ZAŠTO CHAIN */
+.zasto-chain { display: flex; flex-direction: column; gap: 8px; }
+.zasto-item { display: flex; align-items: flex-start; gap: 10px; }
+.zasto-num { width: 24px; height: 24px; background: var(--green); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 8px; }
+.zasto-arrow { color: var(--text-faint); font-size: 18px; margin-top: 8px; flex-shrink: 0; }
+
+/* A3 — ACTION TABLE */
+.action-table { width: 100%; border-collapse: collapse; }
+.action-table th { font-size: 11px; font-weight: 500; color: var(--text-faint); text-transform: uppercase; letter-spacing: .04em; padding: 8px 6px; border-bottom: 2px solid var(--border); text-align: left; }
+.action-table td { padding: 6px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.action-table input, .action-table select, .action-table textarea { width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: 5px; font-family: inherit; font-size: 12px; }
+.action-table textarea { resize: vertical; min-height: 36px; }
+.add-row-btn { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--green); background: none; border: 1px dashed var(--green); border-radius: 6px; padding: 7px 14px; cursor: pointer; margin-top: 10px; font-family: inherit; transition: background .15s; }
+.add-row-btn:hover { background: var(--green-light); }
+
+@media (max-width: 768px) {
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+}
