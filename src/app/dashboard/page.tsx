@@ -127,10 +127,14 @@ export default function DashboardPage() {
   }, [router]);
 
   const handleUpgrade = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
     const res = await fetch('/api/stripe/checkout', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_id: user.id, email: user.email, plan: selectedPlan }),
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session?.access_token}`,
+      },
+      body: JSON.stringify({ plan: selectedPlan }),
     });
     const data = await res.json();
     if (data.url) window.location.href = data.url;

@@ -36,20 +36,27 @@ export default function ProfilPage() {
   };
 
   const handleUpgrade = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
     const res = await fetch('/api/stripe/checkout', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_id: user.id, email: user.email, plan: selectedPlan }),
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session?.access_token}`,
+      },
+      body: JSON.stringify({ plan: selectedPlan }),
     });
     const data = await res.json();
     if (data.url) window.location.href = data.url;
   };
 
   const handleManageSubscription = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
     const res = await fetch('/api/stripe/portal', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ customer_id: profile.stripe_customer_id }),
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session?.access_token}`,
+      },
     });
     const data = await res.json();
     if (data.url) window.location.href = data.url;
