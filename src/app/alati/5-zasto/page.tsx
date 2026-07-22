@@ -3,11 +3,21 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, requireAuth } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2, Save, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Save, Loader2, Printer, Download } from 'lucide-react';
+import jsPDF from 'jspdf';
 
-const KATEGORIJE = ['Kvaliteta', 'Sigurnost', 'Produktivnost', 'Održavanje', 'Logistika', 'Ostalo'];
+const KATEGORIJE = [
+  'Kvaliteta — škart / rework',
+  'Kvaliteta — reklamacija kupca',
+  'Sigurnost — incident / near-miss',
+  'Zastoj stroja / opreme',
+  'Kašnjenje isporuke',
+  'Povećani troškovi',
+  'Procesni problem',
+  'Ostalo',
+];
 const STATUSI = ['📋 Otvoreno', '🔄 U tijeku', '✅ Završeno', '⏸️ Na čekanju'];
-const WHY_LABELS = ['Zašto 1?', 'Zašto 2?', 'Zašto 3?', 'Zašto 4?', 'Zašto 5? (Korijenski uzrok)'];
+const WHY_LABELS = ['Zašto? (1. razina)', 'Zašto? (2. razina)', 'Zašto? (3. razina)', 'Zašto? (4. razina)', 'Zašto? — Korijenski uzrok (5. razina)'];
 const WHY_HINTS = [
   'Koji je neposredni uzrok problema?',
   'Zašto se taj uzrok pojavio?',
@@ -15,6 +25,7 @@ const WHY_HINTS = [
   'Što je uzrokovalo prethodni uzrok?',
   'Ovo je korijenski uzrok — što treba trajno eliminirati?',
 ];
+const WHY_COLORS = ['#e8612a', '#d97706', '#ca8a04', '#4d7c0f', '#1a7a5e'];
 
 interface Analiza { problem: string; zasto: string[]; korijen: string; }
 interface AkcijaRow { akcija: string; odgovorna: string; rok: string; status: string; }
@@ -32,7 +43,7 @@ export default function PetZastoPage() {
   const [tim, setTim] = useState('');
   const [odjel, setOdjel] = useState('');
   const [broj, setBroj] = useState('');
-  const [kategorija, setKategorija] = useState('Kvaliteta');
+  const [kategorija, setKategorija] = useState('');
   const [analize, setAnalize] = useState<Analiza[]>([novaAnaliza()]);
   const [akcije, setAkcije] = useState<AkcijaRow[]>([{ akcija: '', odgovorna: '', rok: '', status: '📋 Otvoreno' }]);
   const [sumUzroci, setSumUzroci] = useState('');
@@ -84,48 +95,179 @@ export default function PetZastoPage() {
     if (!error) setSaved(true);
   };
 
+  const exportPDF = () => {
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const W = 210, M = 14;
+    let y = 0;
+
+    doc.setFillColor(14, 95, 70);
+    doc.rect(0, 0, W, 22, 'F');
+    doc.setFillColor(60, 150, 115);
+    doc.roundedRect(M, 5, 12, 12, 2, 2, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(11); doc.setFont('helvetica', 'bold');
+    doc.text('L', M + 4, 13.5);
+    doc.setFontSize(13); doc.setFont('helvetica', 'bold');
+    doc.text('Leanopedija App', M + 16, 10);
+    doc.setFontSize(8); doc.setFont('helvetica', 'normal');
+    doc.text('app.leanopedija.hr', M + 16, 15);
+    doc.setFontSize(8);
+    doc.text('5X ZAŠTO IZVJEŠTAJ', W - M, 10, { align: 'right' });
+    doc.text(new Date().toLocaleDateString('hr-HR'), W - M, 15, { align: 'right' });
+    y = 32;
+
+    doc.setTextColor(26, 26, 26);
+    doc.setFontSize(18); doc.setFont('helvetica', 'bold');
+    doc.text('5x Zašto — Analiza korijenskog uzroka', M, y);
+    y += 10;
+
+    const mflds: [string, string][] = [
+      ['Datum:', datum], ['Voditelj:', voditelj || '—'], ['Odjel:', odjel || '—'],
+      ['Kategorija:', kategorija || '—'], ['Broj:', broj || '—'], ['Tim:', tim || '—'],
+    ];
+    doc.setFontSize(9);
+    mflds.forEach(([l, v], i) => {
+      const x = M + (i % 2) * 90;
+      if (i % 2 === 0 && i > 0) y += 7;
+      doc.setFont('helvetica', 'bold'); doc.text(l, x, y);
+      doc.setFont('helvetica', 'normal'); doc.text(String(v).substring(0, 40), x + 24, y);
+    });
+    y += 12;
+
+    const checkY = (need: number) => { if (y + need > 280) { doc.addPage(); y = 20; } };
+
+    analize.forEach((a, idx) => {
+      if (!a.problem && !a.korijen && a.zasto.every(z => !z)) return;
+      checkY(20);
+      doc.setFillColor(232, 97, 42); doc.rect(M, y - 4, W - M * 2, 8, 'F');
+      doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
+      doc.text('ANALIZA #' + (idx + 1), M + 2, y + 1); y += 10;
+
+      doc.setTextColor(0, 0, 0); doc.setFontSize(9);
+      if (a.problem) {
+        const lines = doc.splitTextToSize(a.problem, W - M * 2 - 22);
+        doc.setFillColor(255, 247, 237); doc.rect(M, y - 4, W - M * 2, lines.length * 4 + 5, 'F');
+        doc.setFont('helvetica', 'bold'); doc.text('PROBLEM:', M + 2, y);
+        doc.setFont('helvetica', 'normal'); doc.text(lines, M + 26, y);
+        y += lines.length * 4 + 5;
+      }
+
+      a.zasto.forEach((val, i) => {
+        if (!val) return;
+        checkY(12);
+        doc.setFont('helvetica', 'bold'); doc.text(`Zašto ${i + 1}:`, M + 2, y);
+        doc.setFont('helvetica', 'normal');
+        const lines = doc.splitTextToSize(val, W - M * 2 - 26);
+        doc.text(lines, M + 26, y);
+        y += lines.length * 4 + 4;
+      });
+
+      if (a.korijen) {
+        checkY(14);
+        const lines = doc.splitTextToSize(a.korijen, W - M * 2 - 40);
+        doc.setFillColor(232, 245, 240); doc.rect(M, y - 4, W - M * 2, lines.length * 4 + 5, 'F');
+        doc.setFont('helvetica', 'bold'); doc.text('KORIJENSKI UZROK:', M + 2, y);
+        doc.setFont('helvetica', 'normal'); doc.text(lines, M + 44, y);
+        y += lines.length * 4 + 8;
+      }
+      checkY(0);
+    });
+
+    const relevantneAkcije = akcije.filter(a => a.akcija || a.odgovorna);
+    if (relevantneAkcije.length > 0) {
+      checkY(20);
+      doc.setFillColor(26, 122, 94); doc.rect(M, y - 4, W - M * 2, 8, 'F');
+      doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
+      doc.text('KOREKTIVNE AKCIJE', M + 2, y + 1); y += 10;
+      const hdr = ['Akcija', 'Odgovorna osoba', 'Rok', 'Status']; const cw = [80, 40, 30, 30]; let x = M;
+      doc.setFillColor(240, 240, 240); doc.rect(M, y - 4, W - M * 2, 6, 'F');
+      doc.setTextColor(0, 0, 0); doc.setFontSize(8); doc.setFont('helvetica', 'bold');
+      hdr.forEach((h, i) => { doc.text(h, x + 1, y); x += cw[i]; }); y += 4;
+      doc.setFont('helvetica', 'normal');
+      relevantneAkcije.forEach((row, idx) => {
+        checkY(6);
+        x = M;
+        if (idx % 2 === 0) { doc.setFillColor(250, 250, 248); doc.rect(M, y - 3, W - M * 2, 6, 'F'); }
+        const vals = [row.akcija, row.odgovorna, row.rok, row.status];
+        vals.forEach((v, i) => { doc.text(String(v || '').substring(0, cw[i] / 2), x + 1, y); x += cw[i]; });
+        y += 6;
+      });
+      y += 6;
+    }
+
+    if (sumUzroci || sumOcekivano) {
+      checkY(20);
+      doc.setTextColor(0, 0, 0); doc.setFontSize(9);
+      if (sumUzroci) {
+        doc.setFont('helvetica', 'bold'); doc.text('Sažetak uzroka:', M, y); y += 5;
+        doc.setFont('helvetica', 'normal');
+        const l = doc.splitTextToSize(sumUzroci, W - M * 2); doc.text(l, M, y); y += l.length * 4 + 4;
+      }
+      if (sumOcekivano) {
+        checkY(14);
+        doc.setFont('helvetica', 'bold'); doc.text('Očekivani rezultat:', M, y); y += 5;
+        doc.setFont('helvetica', 'normal');
+        const l = doc.splitTextToSize(sumOcekivano, W - M * 2); doc.text(l, M, y); y += l.length * 4 + 4;
+      }
+    }
+    if (sumPotpis) {
+      checkY(8); y += 2;
+      doc.setFont('helvetica', 'bold'); doc.text('Potpis:', M, y);
+      doc.setFont('helvetica', 'normal'); doc.text(sumPotpis, M + 16, y);
+    }
+
+    doc.setFontSize(7); doc.setTextColor(150, 150, 150);
+    doc.text('Izrađeno u Leanopedija App — app.leanopedija.hr', M, 290);
+    doc.save('5x-Zasto-' + new Date().toISOString().slice(0, 10) + '.pdf');
+  };
+
   const inputCls = "w-full px-3 py-2 border border-[#e2e2e2] rounded-lg text-sm focus:border-[#1a7a5e] outline-none bg-[#fafaf8]";
   const labelCls = "block text-xs font-medium text-[#5a5a5a] mb-1";
 
   return (
     <div className="bg-[#fafaf8] min-h-screen pb-20">
       {/* Header */}
-      <div className="bg-white border-b border-[#e2e2e2] px-6 py-6">
-        <div className="max-w-[900px] mx-auto">
-          <div className="inline-flex items-center gap-2 text-xs font-semibold text-red-600 bg-red-50 px-3 py-1 rounded-full mb-3">❓ 5x Zašto</div>
-          <h1 className="font-serif text-3xl text-[#1a1a1a] mb-1">5x Zašto — analiza uzroka</h1>
-          <p className="text-sm text-[#5a5a5a]">Pronađite korijenski uzrok problema postavljanjem pet uzastopnih pitanja "Zašto?"</p>
+      <div className="page-header">
+        <div className="page-header-inner">
+          <div className="tool-badge" style={{ color: 'var(--orange)', background: '#fff7ed' }}>🔍 5x Zašto</div>
+          <h1>5x Zašto — analiza uzroka</h1>
+          <p>Pronađite korijenski uzrok problema postavljanjem pet uzastopnih pitanja &quot;Zašto?&quot;</p>
         </div>
       </div>
 
       {/* Toolbar */}
-      <div className="bg-white border-b border-[#e2e2e2] px-6 py-3">
-        <div className="max-w-[900px] mx-auto flex gap-3">
-          <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 bg-[#1a7a5e] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#155f49] transition-all disabled:opacity-70">
-            {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+      <div className="toolbar">
+        <div className="toolbar-inner">
+          <button className="btn btn-outline" onClick={addAnaliza}><Plus size={14} /> Dodaj analizu</button>
+          <button className="btn btn-outline" onClick={() => window.print()}><Printer size={14} /> Ispis</button>
+          <button className="btn btn-outline" onClick={exportPDF}><Download size={14} /> Preuzmi PDF</button>
+          <button onClick={handleSave} disabled={saving} className="btn btn-primary" style={{ marginLeft: 'auto' }}>
+            {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
             {saving ? 'Spremam...' : 'Spremi u portal'}
           </button>
-          {saved && <span className="text-sm text-[#1a7a5e] font-semibold self-center">✅ Spremljeno!</span>}
         </div>
       </div>
+      {saved && (
+        <div className="max-w-[900px] mx-auto px-6 pt-4">
+          <span className="text-sm text-[#1a7a5e] font-semibold">✅ Spremljeno!</span>
+        </div>
+      )}
 
-      <div className="max-w-[900px] mx-auto px-6 mt-6 space-y-4">
+      <div className="form-wrap">
 
         {/* Meta podaci */}
-        <div className="bg-white border border-[#e2e2e2] rounded-xl overflow-hidden">
-          <div className="bg-[#fafaf8] border-b border-[#e2e2e2] px-4 py-3 flex items-center gap-3">
-            <div className="w-8 h-8 bg-red-50 rounded-lg flex items-center justify-center text-sm">📋</div>
-            <div><h3 className="text-sm font-semibold">Opći podaci</h3><p className="text-xs text-[#9a9a9a]">Tko, kada i što analiziramo</p></div>
-          </div>
-          <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div><label className={labelCls}>Datum analize</label><input type="date" className={inputCls} value={datum} onChange={e => setDatum(e.target.value)} /></div>
-            <div><label className={labelCls}>Voditelj analize</label><input type="text" className={inputCls} placeholder="Ime i prezime" value={voditelj} onChange={e => setVoditelj(e.target.value)} /></div>
-            <div><label className={labelCls}>Tim / Sudionici</label><input type="text" className={inputCls} placeholder="npr. Voditelj kvalitete, Lean koordinator" value={tim} onChange={e => setTim(e.target.value)} /></div>
-            <div><label className={labelCls}>Odjel / Linija / Proces</label><input type="text" className={inputCls} placeholder="npr. Montažna linija A" value={odjel} onChange={e => setOdjel(e.target.value)} /></div>
-            <div><label className={labelCls}>Broj izvještaja / Reference</label><input type="text" className={inputCls} placeholder="npr. NC-2024-042" value={broj} onChange={e => setBroj(e.target.value)} /></div>
-            <div>
-              <label className={labelCls}>Kategorija problema</label>
-              <select className={inputCls} value={kategorija} onChange={e => setKategorija(e.target.value)}>
+        <div className="meta-section">
+          <h3>Opći podaci</h3>
+          <div className="meta-grid">
+            <div className="field"><label>Datum analize</label><input type="date" value={datum} onChange={e => setDatum(e.target.value)} /></div>
+            <div className="field"><label>Voditelj analize</label><input type="text" placeholder="Ime i prezime" value={voditelj} onChange={e => setVoditelj(e.target.value)} /></div>
+            <div className="field"><label>Tim / Sudionici</label><input type="text" placeholder="npr. Voditelj kvalitete, Lean koordinator" value={tim} onChange={e => setTim(e.target.value)} /></div>
+            <div className="field"><label>Odjel / Linija / Proces</label><input type="text" placeholder="npr. Montažna linija A" value={odjel} onChange={e => setOdjel(e.target.value)} /></div>
+            <div className="field"><label>Broj izvještaja / Reference</label><input type="text" placeholder="npr. NC-2024-042" value={broj} onChange={e => setBroj(e.target.value)} /></div>
+            <div className="field">
+              <label>Kategorija problema</label>
+              <select value={kategorija} onChange={e => setKategorija(e.target.value)}>
+                <option value="">— odaberi —</option>
                 {KATEGORIJE.map(k => <option key={k}>{k}</option>)}
               </select>
             </div>
@@ -134,22 +276,17 @@ export default function PetZastoPage() {
 
         {/* Analize */}
         {analize.map((a, ai) => (
-          <div key={ai} className="bg-white border border-[#e2e2e2] rounded-xl overflow-hidden">
-            <div className="bg-[#fafaf8] border-b border-[#e2e2e2] px-4 py-3 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-red-50 text-red-600 rounded-lg flex items-center justify-center text-sm font-bold">{ai + 1}</div>
-                <div><h3 className="text-sm font-semibold">Analiza {ai + 1}</h3><p className="text-xs text-[#9a9a9a]">Problem → 5x Zašto → Korijenski uzrok</p></div>
-              </div>
+          <div key={ai} className="analysis-block">
+            <div className="analysis-header">
+              <span className="analysis-num">🔍 Analiza #{ai + 1}</span>
               {analize.length > 1 && (
-                <button onClick={() => removeAnaliza(ai)} className="text-[#9a9a9a] hover:text-red-500 transition-colors p-1"><Trash2 size={16} /></button>
+                <button className="del-analysis-btn" onClick={() => removeAnaliza(ai)}>✕ Ukloni</button>
               )}
             </div>
-            <div className="p-4 space-y-4">
-              {/* Problem */}
-              <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
-                <label className="block text-xs font-bold text-orange-600 uppercase tracking-wider mb-2">🔴 Problem / Simptom</label>
+            <div className="analysis-body">
+              <div className="problem-box">
+                <label>🔴 Problem / Simptom</label>
                 <textarea
-                  className="w-full px-3 py-2 border border-orange-200 rounded-lg text-sm focus:border-orange-400 outline-none bg-white resize-none"
                   rows={2}
                   placeholder="Što se točno dogodilo? Budite specifični — kada, gdje, koliko često, koliki je utjecaj?"
                   value={a.problem}
@@ -157,101 +294,70 @@ export default function PetZastoPage() {
                 />
               </div>
 
-              {/* 5x Zašto */}
-              <div className="space-y-3">
+              <div className="why-chain">
                 {a.zasto.map((z, wi) => (
-                  <div key={wi} className="flex gap-3 items-start">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 mt-1 ${wi === 4 ? 'bg-[#e8f5f0] text-[#1a7a5e]' : 'bg-[#fafaf8] border border-[#e2e2e2] text-[#5a5a5a]'}`}>
-                      {wi + 1}
-                    </div>
-                    <div className="flex-1">
-                      <label className="block text-xs font-semibold text-[#5a5a5a] uppercase tracking-wider mb-1">{WHY_LABELS[wi]}</label>
-                      <textarea
-                        className={`w-full px-3 py-2 border rounded-lg text-sm outline-none resize-none bg-[#fafaf8] ${wi === 4 ? 'border-[#1a7a5e] focus:border-[#155f49]' : 'border-[#e2e2e2] focus:border-[#1a7a5e]'}`}
-                        rows={2}
-                        placeholder={WHY_HINTS[wi]}
-                        value={z}
-                        onChange={e => updateZasto(ai, wi, e.target.value)}
-                      />
-                    </div>
+                  <div key={wi} className="why-item">
+                    <div className="why-number" style={{ background: WHY_COLORS[wi] }}>{wi + 1}</div>
+                    <div className="why-label">{WHY_LABELS[wi]}</div>
+                    <textarea
+                      className="why-input"
+                      rows={2}
+                      placeholder={WHY_HINTS[wi]}
+                      value={z}
+                      onChange={e => updateZasto(ai, wi, e.target.value)}
+                    />
+                    {wi < 4 && <div className="why-arrow">↓</div>}
                   </div>
                 ))}
               </div>
 
-              {/* Korijenski uzrok */}
-              <div className="bg-[#e8f5f0] border border-[#1a7a5e]/20 rounded-xl p-4">
-                <label className="block text-xs font-bold text-[#1a7a5e] uppercase tracking-wider mb-2">✅ Korijenski uzrok (zaključak)</label>
+              <div className="root-cause-box">
+                <label>✅ Korijenski uzrok (zaključak)</label>
                 <textarea
-                  className="w-full px-3 py-2 border border-[#1a7a5e]/30 rounded-lg text-sm focus:border-[#1a7a5e] outline-none bg-white resize-none"
                   rows={2}
                   placeholder="Sažmite korijenski uzrok u jednu-dvije rečenice. Ovo je uzrok koji treba eliminirati."
                   value={a.korijen}
                   onChange={e => updateAnaliza(ai, 'korijen', e.target.value)}
                 />
               </div>
+
+              <div className="tip-box">
+                <strong>💡 Savjet:</strong>
+                Kada pronađete korijenski uzrok, zapitajte se: &quot;Da uklonimo ovaj uzrok, hoće li se problem ponoviti?&quot; Ako je odgovor NE — pronašli ste pravi korijenski uzrok.
+              </div>
             </div>
           </div>
         ))}
 
-        <button onClick={addAnaliza} className="flex items-center gap-2 text-sm text-[#1a7a5e] border border-dashed border-[#1a7a5e] rounded-xl px-5 py-3 hover:bg-[#e8f5f0] transition-all w-full justify-center">
-          <Plus size={16} /> Dodaj još jednu analizu
-        </button>
-
         {/* Akcijski plan */}
-        <div className="bg-white border border-[#e2e2e2] rounded-xl overflow-hidden">
-          <div className="bg-[#fafaf8] border-b border-[#e2e2e2] px-4 py-3 flex items-center gap-3">
-            <div className="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center text-sm">🎯</div>
-            <div><h3 className="text-sm font-semibold">Akcijski plan</h3><p className="text-xs text-[#9a9a9a]">Korektivne i preventivne akcije</p></div>
+        <div className="meta-section">
+          <h3>🎯 Korektivne i preventivne akcije</h3>
+          <div className="action-header">
+            <span>Akcija</span><span>Odgovorna osoba</span><span>Rok</span><span>Status</span><span></span>
           </div>
-          <div className="p-4">
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="border-b border-[#e2e2e2]">
-                    <th className="text-left py-2 px-2 text-[#9a9a9a] font-medium w-8">#</th>
-                    <th className="text-left py-2 px-2 text-[#9a9a9a] font-medium">Akcija</th>
-                    <th className="text-left py-2 px-2 text-[#9a9a9a] font-medium">Odgovorna osoba</th>
-                    <th className="text-left py-2 px-2 text-[#9a9a9a] font-medium">Rok</th>
-                    <th className="text-left py-2 px-2 text-[#9a9a9a] font-medium">Status</th>
-                    <th className="w-8"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {akcije.map((a, i) => (
-                    <tr key={i} className="border-b border-[#f0f0f0]">
-                      <td className="py-2 px-2 text-[#9a9a9a] text-center">{i + 1}</td>
-                      <td className="py-1 px-1"><input className="w-full px-2 py-1.5 border border-[#e2e2e2] rounded text-xs focus:border-[#1a7a5e] outline-none bg-[#fafaf8]" placeholder="Opis akcije..." value={a.akcija} onChange={e => updateAkcija(i, 'akcija', e.target.value)} /></td>
-                      <td className="py-1 px-1"><input className="w-full px-2 py-1.5 border border-[#e2e2e2] rounded text-xs focus:border-[#1a7a5e] outline-none bg-[#fafaf8]" placeholder="Ime..." value={a.odgovorna} onChange={e => updateAkcija(i, 'odgovorna', e.target.value)} /></td>
-                      <td className="py-1 px-1"><input type="date" className="w-full px-2 py-1.5 border border-[#e2e2e2] rounded text-xs focus:border-[#1a7a5e] outline-none bg-[#fafaf8]" value={a.rok} onChange={e => updateAkcija(i, 'rok', e.target.value)} /></td>
-                      <td className="py-1 px-1">
-                        <select className="w-full px-2 py-1.5 border border-[#e2e2e2] rounded text-xs focus:border-[#1a7a5e] outline-none bg-[#fafaf8]" value={a.status} onChange={e => updateAkcija(i, 'status', e.target.value)}>
-                          {STATUSI.map(s => <option key={s}>{s}</option>)}
-                        </select>
-                      </td>
-                      <td className="py-1 px-1"><button onClick={() => removeAkcija(i)} className="text-[#9a9a9a] hover:text-red-500 p-1"><Trash2 size={14} /></button></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {akcije.map((a, i) => (
+            <div key={i} className="action-row">
+              <input type="text" placeholder="Opis korektivne / preventivne akcije..." value={a.akcija} onChange={e => updateAkcija(i, 'akcija', e.target.value)} />
+              <input type="text" placeholder="Ime i prezime" value={a.odgovorna} onChange={e => updateAkcija(i, 'odgovorna', e.target.value)} />
+              <input type="date" value={a.rok} onChange={e => updateAkcija(i, 'rok', e.target.value)} />
+              <select value={a.status} onChange={e => updateAkcija(i, 'status', e.target.value)}>
+                {STATUSI.map(s => <option key={s}>{s}</option>)}
+              </select>
+              <button className="del-btn" onClick={() => removeAkcija(i)}>✕</button>
             </div>
-            <button onClick={addAkcija} className="mt-3 flex items-center gap-2 text-xs text-[#1a7a5e] border border-dashed border-[#1a7a5e] rounded-lg px-4 py-2 hover:bg-[#e8f5f0] transition-all">
-              <Plus size={14} /> Dodaj akciju
-            </button>
-          </div>
+          ))}
+          <button className="add-action-btn" onClick={addAkcija}><Plus size={14} /> Dodaj akciju</button>
         </div>
 
         {/* Sažetak */}
-        <div className="bg-white border border-[#e2e2e2] rounded-xl overflow-hidden">
-          <div className="bg-[#fafaf8] border-b border-[#e2e2e2] px-4 py-3 flex items-center gap-3">
-            <div className="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center text-sm">📝</div>
-            <div><h3 className="text-sm font-semibold">Sažetak i provjera</h3><p className="text-xs text-[#9a9a9a]">Zaključci i praćenje učinkovitosti</p></div>
-          </div>
-          <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div><label className={labelCls}>Sažetak korijenskih uzroka</label><textarea className="w-full px-3 py-2 border border-[#e2e2e2] rounded-lg text-sm focus:border-[#1a7a5e] outline-none bg-[#fafaf8] resize-none" rows={3} placeholder="Ukratko opišite što ste otkrili kao korijenski uzrok..." value={sumUzroci} onChange={e => setSumUzroci(e.target.value)} /></div>
-            <div><label className={labelCls}>Očekivani rezultat nakon provedbe akcija</label><textarea className="w-full px-3 py-2 border border-[#e2e2e2] rounded-lg text-sm focus:border-[#1a7a5e] outline-none bg-[#fafaf8] resize-none" rows={3} placeholder="Što se očekuje poboljšati / koje metrike pratiti?" value={sumOcekivano} onChange={e => setSumOcekivano(e.target.value)} /></div>
-            <div><label className={labelCls}>Datum provjere učinkovitosti</label><input type="date" className={inputCls} value={sumProva} onChange={e => setSumProva(e.target.value)} /></div>
-            <div><label className={labelCls}>Rezultat provjere</label><input type="text" className={inputCls} placeholder="Ispuniti nakon provjere..." value={sumRezultat} onChange={e => setSumRezultat(e.target.value)} /></div>
-            <div className="md:col-span-2"><label className={labelCls}>Potpis voditelja analize</label><input type="text" className={inputCls} placeholder="Ime i prezime" value={sumPotpis} onChange={e => setSumPotpis(e.target.value)} /></div>
+        <div className="meta-section">
+          <h3>📝 Sažetak i provjera učinkovitosti</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="field"><label>Sažetak korijenskih uzroka</label><textarea rows={3} placeholder="Ukratko opišite što ste otkrili kao korijenski uzrok..." value={sumUzroci} onChange={e => setSumUzroci(e.target.value)} /></div>
+            <div className="field"><label>Očekivani rezultat nakon provedbe akcija</label><textarea rows={3} placeholder="Što se očekuje poboljšati / koje metrike pratiti?" value={sumOcekivano} onChange={e => setSumOcekivano(e.target.value)} /></div>
+            <div className="field"><label>Datum provjere učinkovitosti</label><input type="date" value={sumProva} onChange={e => setSumProva(e.target.value)} /></div>
+            <div className="field"><label>Rezultat provjere</label><input type="text" placeholder="Ispuniti nakon provjere..." value={sumRezultat} onChange={e => setSumRezultat(e.target.value)} /></div>
+            <div className="field md:col-span-2"><label>Potpis voditelja analize</label><input type="text" placeholder="Ime i prezime" value={sumPotpis} onChange={e => setSumPotpis(e.target.value)} /></div>
           </div>
         </div>
 
