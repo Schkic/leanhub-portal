@@ -3,17 +3,18 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, requireAuth } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import { Save, Loader2 } from 'lucide-react';
+import { Save, Loader2, Printer, Download, RotateCcw } from 'lucide-react';
+import jsPDF from 'jspdf';
 
 const KATEGORIJE = [
-  { value: 'Sigurnost', emoji: '🦺', color: 'border-red-300 bg-red-50 text-red-700' },
-  { value: 'Kvaliteta', emoji: '✅', color: 'border-blue-300 bg-blue-50 text-blue-700' },
-  { value: 'Produktivnost', emoji: '⚡', color: 'border-yellow-300 bg-yellow-50 text-yellow-700' },
-  { value: 'Troškovi', emoji: '💰', color: 'border-green-300 bg-green-50 text-green-700' },
-  { value: 'Ergonomija', emoji: '🧑‍🔧', color: 'border-purple-300 bg-purple-50 text-purple-700' },
-  { value: 'Okoliš', emoji: '🌱', color: 'border-teal-300 bg-teal-50 text-teal-700' },
-  { value: 'Dostava', emoji: '🚚', color: 'border-orange-300 bg-orange-50 text-orange-700' },
-  { value: 'Ostalo', emoji: '💡', color: 'border-gray-300 bg-gray-50 text-gray-700' },
+  { value: 'Sigurnost', emoji: '🦺', color: 'border-red-300 bg-red-50 text-red-700', desc: 'Smanjuje rizik ozljeda' },
+  { value: 'Kvaliteta', emoji: '✅', color: 'border-blue-300 bg-blue-50 text-blue-700', desc: 'Smanjuje greške i škart' },
+  { value: 'Produktivnost', emoji: '⚡', color: 'border-yellow-300 bg-yellow-50 text-yellow-700', desc: 'Ubrzava proces' },
+  { value: 'Troškovi', emoji: '💰', color: 'border-green-300 bg-green-50 text-green-700', desc: 'Smanjuje troškove' },
+  { value: 'Ergonomija', emoji: '🧑‍🔧', color: 'border-purple-300 bg-purple-50 text-purple-700', desc: 'Lakši i ugodniji rad' },
+  { value: 'Okoliš', emoji: '🌱', color: 'border-teal-300 bg-teal-50 text-teal-700', desc: 'Manje otpada i emisija' },
+  { value: 'Dostava', emoji: '🚚', color: 'border-orange-300 bg-orange-50 text-orange-700', desc: 'Brža ili pouzdanija isporuka' },
+  { value: 'Ostalo', emoji: '💡', color: 'border-gray-300 bg-gray-50 text-gray-700', desc: 'Nešto drugo' },
 ];
 
 const PRIORITETI = [
@@ -69,6 +70,83 @@ export default function KaizenPrijedlogPage() {
     if (!error) setSaved(true);
   };
 
+  const resetForm = () => {
+    if (!confirm('Započeti novi prijedlog? Trenutni unos će biti izgubljen.')) return;
+    setIme(''); setOdjel(''); setRadnoMjesto('');
+    setProbGdje(''); setProbOpis(''); setBaPrije(''); setBaPoslije('');
+    setRjesOpis(''); setRjesPotrebno(''); setRjesTrosak('');
+    setKategorija(''); setPrioritet(''); setStatus('Otvoreno');
+    setDatum(new Date().toISOString().split('T')[0]);
+  };
+
+  const exportPDF = () => {
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const W = 210, M = 14, CW = W - M * 2;
+    let y = 0;
+
+    doc.setFillColor(14, 95, 70); doc.rect(0, 0, W, 20, 'F');
+    doc.setTextColor(255, 255, 255); doc.setFontSize(14); doc.setFont('helvetica', 'bold');
+    doc.text('Leanopedija App', M, 9);
+    doc.setFontSize(10); doc.setFont('helvetica', 'normal');
+    doc.text('Kaizen prijedlog poboljšanja', M, 16);
+    doc.setFontSize(8); doc.text('app.leanopedija.hr', W - M, 9, { align: 'right' });
+    doc.text(new Date().toLocaleDateString('hr-HR'), W - M, 16, { align: 'right' });
+    y = 28;
+
+    const checkPage = (needed = 15) => { if (y + needed > 280) { doc.addPage(); y = 20; } };
+
+    const sectionTitle = (title: string) => {
+      checkPage(12);
+      doc.setFillColor(232, 245, 240); doc.rect(M, y - 4, CW, 8, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(26, 122, 94);
+      doc.text(title, M + 2, y);
+      doc.setTextColor(0, 0, 0); y += 6;
+    };
+
+    const fieldRow = (label: string, value: string) => {
+      checkPage(12);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(100, 100, 100);
+      doc.text(label, M, y);
+      doc.setFont('helvetica', 'normal'); doc.setTextColor(0, 0, 0);
+      const lines = doc.splitTextToSize(value || '—', CW);
+      doc.text(lines, M, y + 5);
+      y += 5 + lines.length * 4 + 3;
+    };
+
+    const twoFields = (l1: string, v1: string, l2: string, v2: string) => {
+      checkPage(16);
+      const hw = (CW - 6) / 2;
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(100, 100, 100);
+      doc.text(l1, M, y); doc.text(l2, M + hw + 6, y);
+      doc.setFont('helvetica', 'normal'); doc.setTextColor(0, 0, 0);
+      doc.text(String(v1 || '—').substring(0, 40), M, y + 5);
+      doc.text(String(v2 || '—').substring(0, 40), M + hw + 6, y + 5);
+      y += 12;
+    };
+
+    sectionTitle('PODNOSITELJ PRIJEDLOGA');
+    twoFields('Ime i prezime:', ime || 'Anonimno', 'Datum:', datum);
+    twoFields('Odjel / pogon:', odjel, 'Radno mjesto:', radnoMjesto);
+
+    sectionTitle('OPIS PROBLEMA ILI PRILIKE');
+    fieldRow('Gdje se problem pojavljuje:', probGdje);
+    fieldRow('Opis problema / prilike:', probOpis);
+    twoFields('Trenutno stanje (prije):', baPrije, 'Željeno stanje (poslije):', baPoslije);
+
+    sectionTitle('PREDLOŽENO RJEŠENJE');
+    fieldRow('Rješenje:', rjesOpis);
+    twoFields('Potrebno za implementaciju:', rjesPotrebno, 'Procijenjeni trošak:', rjesTrosak);
+
+    sectionTitle('UTJECAJ, PRIORITET I STATUS');
+    twoFields('Kategorija:', kategorija, 'Prioritet:', prioritet);
+    fieldRow('Status:', status);
+
+    doc.setFontSize(7); doc.setTextColor(150, 150, 150);
+    doc.text('Izrađeno u Leanopedija App — app.leanopedija.hr', M, 290);
+
+    doc.save('Kaizen-Prijedlog-' + (ime || 'anonimno').substring(0, 30).replace(/\s/g, '-') + '-' + new Date().toISOString().slice(0, 10) + '.pdf');
+  };
+
   const inputCls = "w-full px-3 py-2 border border-[#e2e2e2] rounded-lg text-sm focus:border-[#1a7a5e] outline-none bg-[#fafaf8]";
   const labelCls = "block text-xs font-medium text-[#5a5a5a] mb-1";
   const textareaCls = `${inputCls} resize-none`;
@@ -96,8 +174,17 @@ export default function KaizenPrijedlogPage() {
 
       {/* Toolbar */}
       <div className="bg-white border-b border-[#e2e2e2] px-6 py-3">
-        <div className="max-w-[900px] mx-auto flex gap-3">
-          <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 bg-[#1a7a5e] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#155f49] transition-all disabled:opacity-70">
+        <div className="max-w-[900px] mx-auto flex items-center gap-3 flex-wrap">
+          <button onClick={resetForm} className="flex items-center gap-2 border border-[#e2e2e2] text-[#1a1a1a] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#fafaf8] transition-all">
+            <RotateCcw size={16} /> Novi prijedlog
+          </button>
+          <button onClick={() => window.print()} className="flex items-center gap-2 border border-[#e2e2e2] text-[#1a1a1a] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#fafaf8] transition-all">
+            <Printer size={16} /> Ispis
+          </button>
+          <button onClick={exportPDF} className="flex items-center gap-2 border border-[#e2e2e2] text-[#1a1a1a] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#fafaf8] transition-all">
+            <Download size={16} /> Preuzmi PDF
+          </button>
+          <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 bg-[#1a7a5e] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#155f49] transition-all disabled:opacity-70 ml-auto">
             {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
             {saving ? 'Spremam...' : 'Spremi prijedlog'}
           </button>
@@ -156,6 +243,7 @@ export default function KaizenPrijedlogPage() {
                 className={`p-3 rounded-xl border-2 text-center transition-all ${kategorija === k.value ? k.color + ' border-current' : 'border-[#e2e2e2] bg-white hover:bg-[#fafaf8]'}`}>
                 <div className="text-2xl mb-1">{k.emoji}</div>
                 <div className="text-xs font-semibold">{k.value}</div>
+                <div className="text-[10px] opacity-70 mt-0.5">{k.desc}</div>
               </button>
             ))}
           </div>
