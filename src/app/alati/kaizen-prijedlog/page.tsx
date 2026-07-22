@@ -169,6 +169,9 @@ export default function KaizenPrijedlogPage() {
           <div className="inline-flex items-center gap-2 text-xs font-semibold text-[#1a7a5e] bg-[#e8f5f0] px-3 py-1 rounded-full mb-3">♾️ Kaizen</div>
           <h1 className="font-serif text-3xl text-[#1a1a1a] mb-1">Kaizen prijedlog</h1>
           <p className="text-sm text-[#5a5a5a]">Predložite poboljšanje procesa, radnog mjesta ili sigurnosti. Svaki prijedlog je vrijedan!</p>
+          <a href="/alati/kaizen-prijedlog/pracenje" className="inline-flex items-center gap-1 text-sm font-semibold text-[#1a7a5e] hover:underline mt-3">
+            📊 Otvori sustav praćenja svih prijedloga →
+          </a>
         </div>
       </div>
 
