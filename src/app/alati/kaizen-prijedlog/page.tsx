@@ -26,6 +26,16 @@ const PRIORITETI = [
 
 const STATUSI = ['Otvoreno', 'U razmatranju', 'Odobreno', 'U provedbi', 'Završeno', 'Odbijeno'];
 
+const Section = ({ icon, title, subtitle, color, children }: any) => (
+  <div className="bg-white border border-[#e2e2e2] rounded-xl overflow-hidden">
+    <div className="bg-[#fafaf8] border-b border-[#e2e2e2] px-4 py-3 flex items-center gap-3">
+      <div className={`w-8 h-8 ${color} rounded-lg flex items-center justify-center text-sm`}>{icon}</div>
+      <div><h3 className="text-sm font-semibold">{title}</h3><p className="text-xs text-[#9a9a9a]">{subtitle}</p></div>
+    </div>
+    <div className="p-4">{children}</div>
+  </div>
+);
+
 export default function KaizenPrijedlogPage() {
   const [user, setUser] = useState<any>(null);
   const [saving, setSaving] = useState(false);
@@ -150,16 +160,6 @@ export default function KaizenPrijedlogPage() {
   const inputCls = "w-full px-3 py-2 border border-[#e2e2e2] rounded-lg text-sm focus:border-[#1a7a5e] outline-none bg-[#fafaf8]";
   const labelCls = "block text-xs font-medium text-[#5a5a5a] mb-1";
   const textareaCls = `${inputCls} resize-none`;
-
-  const Section = ({ icon, title, subtitle, color, children }: any) => (
-    <div className="bg-white border border-[#e2e2e2] rounded-xl overflow-hidden">
-      <div className="bg-[#fafaf8] border-b border-[#e2e2e2] px-4 py-3 flex items-center gap-3">
-        <div className={`w-8 h-8 ${color} rounded-lg flex items-center justify-center text-sm`}>{icon}</div>
-        <div><h3 className="text-sm font-semibold">{title}</h3><p className="text-xs text-[#9a9a9a]">{subtitle}</p></div>
-      </div>
-      <div className="p-4">{children}</div>
-    </div>
-  );
 
   return (
     <div className="bg-[#fafaf8] min-h-screen pb-20">
