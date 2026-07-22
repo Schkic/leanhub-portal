@@ -22,9 +22,12 @@ export async function POST(req: NextRequest) {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
   const { plan } = await req.json()
 
-  // 'annual' bira godišnji Price, sve ostalo (uklj. nedostajući plan) pada na mjesečni
+  // 'annual' bira godišnji Price, sve ostalo (uklj. nedostajući plan) pada na mjesečni.
+  // Fallback ID-jevi su odvojeni po planu — prije su oba plana padala na isti
+  // (mjesečni) ID kad env varijabla nedostaje, pa bi netko tko odabere "Godišnje"
+  // u okruženju bez STRIPE_PRICE_ANNUAL zapravo bio naplaćen mjesečno.
   const priceId = plan === 'annual'
-    ? (process.env.STRIPE_PRICE_ANNUAL || 'price_1Te9KAV05VSFlO3aD0yD5439')
+    ? (process.env.STRIPE_PRICE_ANNUAL || 'price_1TvZKcV05VSFlO3apQiDKlYG')
     : (process.env.STRIPE_PRICE_MONTHLY || 'price_1Te9KAV05VSFlO3aD0yD5439')
 
   try {
