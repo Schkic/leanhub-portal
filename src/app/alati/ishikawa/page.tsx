@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, requireAuth } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2, Save, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Save, Loader2, Printer, Download, RotateCcw } from 'lucide-react';
+import jsPDF from 'jspdf';
 
 const KATEGORIJE_DEFAULT = [
   { id: 'covjek',    label: 'Čovjek',   emoji: '👷', color: '#1a7a5e', bg: '#e8f5f0' },
@@ -16,6 +17,11 @@ const KATEGORIJE_DEFAULT = [
 
 const defaultKategorije = () =>
   Object.fromEntries(KATEGORIJE_DEFAULT.map(k => [k.id, ['', '', '']]));
+
+const hexToRgb = (hex: string) => {
+  const n = parseInt(hex.replace('#', ''), 16);
+  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+};
 
 export default function IshikawaPage() {
   const [user, setUser] = useState<any>(null);
@@ -70,6 +76,86 @@ export default function IshikawaPage() {
     if (!error) setSaved(true);
   };
 
+  const resetForm = () => {
+    if (!confirm('Resetirati cijelu analizu?')) return;
+    setProblem(''); setTim(''); setOdjel('');
+    setKategorije(defaultKategorije());
+    setKorijenski(''); setNapomena('');
+    setDatum(new Date().toISOString().split('T')[0]);
+  };
+
+  const exportPDF = () => {
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const W = 210, M = 14, CW = W - M * 2;
+    let y = 0;
+
+    doc.setFillColor(14, 95, 70); doc.rect(0, 0, W, 20, 'F');
+    doc.setTextColor(255, 255, 255); doc.setFontSize(14); doc.setFont('helvetica', 'bold');
+    doc.text('Leanopedija App', M, 9);
+    doc.setFontSize(10); doc.setFont('helvetica', 'normal');
+    doc.text('Ishikawa dijagram (Riblja kost)', M, 16);
+    doc.setFontSize(8); doc.text('app.leanopedija.hr', W - M, 9, { align: 'right' });
+    doc.text(new Date().toLocaleDateString('hr-HR'), W - M, 16, { align: 'right' });
+    y = 28;
+
+    const checkPage = (needed = 15) => { if (y + needed > 280) { doc.addPage(); y = 20; } };
+
+    doc.setFillColor(254, 242, 242); doc.roundedRect(M, y, CW, 14, 3, 3, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(220, 38, 38);
+    doc.text('PROBLEM:', M + 4, y + 6);
+    doc.setFont('helvetica', 'normal'); doc.setTextColor(0, 0, 0);
+    const problemLines = doc.splitTextToSize(problem || '—', CW - 8);
+    doc.text(problemLines, M + 4, y + 11);
+    y += 14 + problemLines.length * 4;
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold'); doc.text('Datum:', M, y);
+    doc.setFont('helvetica', 'normal'); doc.text(datum || '—', M + 18, y);
+    doc.setFont('helvetica', 'bold'); doc.text('Tim:', M + 70, y);
+    doc.setFont('helvetica', 'normal'); doc.text(tim || '—', M + 82, y);
+    y += 6;
+    doc.setFont('helvetica', 'bold'); doc.text('Odjel:', M, y);
+    doc.setFont('helvetica', 'normal'); doc.text(odjel || '—', M + 18, y);
+    y += 10;
+
+    KATEGORIJE_DEFAULT.forEach(kat => {
+      const uzroci = kategorije[kat.id].filter(u => u);
+      if (uzroci.length === 0) return;
+      checkPage(10 + uzroci.length * 5);
+      const rgb = hexToRgb(kat.color);
+      doc.setFillColor(rgb.r, rgb.g, rgb.b); doc.rect(M, y - 4, CW, 7, 'F');
+      doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+      doc.text(`${kat.label} (${uzroci.length})`, M + 2, y + 1); y += 8;
+      doc.setTextColor(0, 0, 0); doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+      uzroci.forEach((u, i) => {
+        checkPage(6);
+        doc.text(`${i + 1}. ${u}`, M + 4, y); y += 5;
+      });
+      y += 3;
+    });
+
+    if (korijenski) {
+      checkPage(15);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(26, 122, 94);
+      doc.text('Korijenski uzrok (zaključak):', M, y); y += 5;
+      doc.setFont('helvetica', 'normal'); doc.setTextColor(0, 0, 0);
+      const lines = doc.splitTextToSize(korijenski, CW);
+      doc.text(lines, M, y); y += lines.length * 4 + 4;
+    }
+    if (napomena) {
+      checkPage(15);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(0, 0, 0);
+      doc.text('Napomena / Sljedeći koraci:', M, y); y += 5;
+      doc.setFont('helvetica', 'normal');
+      const lines = doc.splitTextToSize(napomena, CW);
+      doc.text(lines, M, y);
+    }
+
+    doc.setFontSize(7); doc.setTextColor(150, 150, 150);
+    doc.text('Izrađeno u Leanopedija App — app.leanopedija.hr', M, 290);
+    doc.save('Ishikawa-' + new Date().toISOString().slice(0, 10) + '.pdf');
+  };
+
   const inputCls = "w-full px-3 py-2 border border-[#e2e2e2] rounded-lg text-sm focus:border-[#1a7a5e] outline-none bg-[#fafaf8]";
   const labelCls = "block text-xs font-medium text-[#5a5a5a] mb-1";
 
@@ -97,9 +183,18 @@ export default function IshikawaPage() {
 
       {/* Toolbar */}
       <div className="bg-white border-b border-[#e2e2e2] px-6 py-3">
-        <div className="max-w-[1000px] mx-auto flex gap-3">
+        <div className="max-w-[1000px] mx-auto flex gap-3 flex-wrap items-center">
+          <button onClick={resetForm} className="flex items-center gap-2 border border-[#e2e2e2] text-[#1a1a1a] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#fafaf8] transition-all">
+            <RotateCcw size={16} /> Resetiraj
+          </button>
+          <button onClick={() => window.print()} className="flex items-center gap-2 border border-[#e2e2e2] text-[#1a1a1a] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#fafaf8] transition-all">
+            <Printer size={16} /> Ispis
+          </button>
+          <button onClick={exportPDF} className="flex items-center gap-2 border border-[#e2e2e2] text-[#1a1a1a] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#fafaf8] transition-all">
+            <Download size={16} /> Preuzmi PDF
+          </button>
           <button onClick={handleSave} disabled={saving}
-            className="flex items-center gap-2 bg-[#1a7a5e] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#155f49] transition-all disabled:opacity-70">
+            className="flex items-center gap-2 bg-[#1a7a5e] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#155f49] transition-all disabled:opacity-70 ml-auto">
             {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
             {saving ? 'Spremam...' : 'Spremi u portal'}
           </button>

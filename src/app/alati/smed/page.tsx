@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, requireAuth } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2, Save, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Save, Loader2, Printer, Download, RotateCcw } from 'lucide-react';
+import jsPDF from 'jspdf';
 
 interface Aktivnost {
   naziv: string;
@@ -90,6 +91,109 @@ export default function SMEDPage() {
     if (!error) setSaved(true);
   };
 
+  const resetForm = () => {
+    if (!confirm('Resetirati cijelu analizu?')) return;
+    setStroj(''); setPraces(''); setTim(''); setOdjel('');
+    setAktivnosti([novaAktivnost()]);
+    setAkcije([{ akcija: '', odgovorna: '', rok: '', status: 'Otvoreno' }]);
+    setNapomena('');
+    setDatum(new Date().toISOString().split('T')[0]);
+  };
+
+  const exportPDF = () => {
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const W = 210, M = 14, CW = W - M * 2;
+    let y = 0;
+
+    doc.setFillColor(14, 95, 70); doc.rect(0, 0, W, 20, 'F');
+    doc.setTextColor(255, 255, 255); doc.setFontSize(14); doc.setFont('helvetica', 'bold');
+    doc.text('Leanopedija App', M, 9);
+    doc.setFontSize(10); doc.setFont('helvetica', 'normal');
+    doc.text('SMED analiza', M, 16);
+    doc.setFontSize(8); doc.text('app.leanopedija.hr', W - M, 9, { align: 'right' });
+    doc.text(new Date().toLocaleDateString('hr-HR'), W - M, 16, { align: 'right' });
+    y = 28;
+
+    const checkPage = (needed = 15) => { if (y + needed > 280) { doc.addPage(); y = 20; } };
+
+    doc.setTextColor(0, 0, 0); doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold'); doc.text('Stroj:', M, y);
+    doc.setFont('helvetica', 'normal'); doc.text(stroj || '—', M + 20, y);
+    doc.setFont('helvetica', 'bold'); doc.text('Proces:', M + 90, y);
+    doc.setFont('helvetica', 'normal'); doc.text(proces || '—', M + 108, y);
+    y += 7;
+    doc.setFont('helvetica', 'bold'); doc.text('Datum:', M, y);
+    doc.setFont('helvetica', 'normal'); doc.text(datum || '—', M + 20, y);
+    doc.setFont('helvetica', 'bold'); doc.text('Odjel:', M + 90, y);
+    doc.setFont('helvetica', 'normal'); doc.text(odjel || '—', M + 108, y);
+    y += 10;
+
+    doc.setFillColor(232, 245, 240); doc.roundedRect(M, y, CW, 26, 3, 3, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(26, 122, 94);
+    let ry = y + 7;
+    doc.text(`Ukupno prije: ${formatMin(totalPrije)}`, M + 6, ry);
+    doc.text(`Interno: ${formatMin(totalInterne)}`, M + 6, ry + 6);
+    doc.text(`Eksterno: ${formatMin(totalExterne)}`, M + 6, ry + 12);
+    doc.text(`Novo interno nakon: ${formatMin(novoInterne)}`, M + 90, ry);
+    doc.text(`Ušteda: ${formatMin(usteda)}`, M + 90, ry + 6);
+    doc.setFontSize(11);
+    doc.text(`Poboljšanje: ${poboljsanje > 0 ? poboljsanje + '%' : '—'}`, M + 90, ry + 14);
+    y += 32;
+
+    const relevantneAkt = aktivnosti.filter(a => a.naziv);
+    if (relevantneAkt.length > 0) {
+      checkPage(12);
+      doc.setFillColor(26, 122, 94); doc.rect(M, y - 4, CW, 8, 'F');
+      doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
+      doc.text('SNIMANJE AKTIVNOSTI', M + 2, y + 1); y += 10;
+      const hdr = ['Aktivnost', 'Min', 'Tip (sada)', 'Prijedlog', 'Tip (nakon)']; const cw = [58, 14, 26, 58, 26]; let x = M;
+      doc.setFillColor(240, 240, 240); doc.rect(M, y - 4, CW, 6, 'F');
+      doc.setTextColor(0, 0, 0); doc.setFontSize(8); doc.setFont('helvetica', 'bold');
+      hdr.forEach((h, i) => { doc.text(h, x + 1, y); x += cw[i]; }); y += 4;
+      doc.setFont('helvetica', 'normal');
+      relevantneAkt.forEach((a, idx) => {
+        checkPage(8);
+        const vals = [a.naziv, String(a.trajanje), a.tip === 'interna' ? 'Interna' : 'Eksterna', a.prijedlog, a.novaTip === 'interna' ? 'Interna' : 'Eksterna'];
+        x = M; if (idx % 2 === 0) { doc.setFillColor(250, 250, 248); doc.rect(M, y - 3, CW, 6, 'F'); }
+        vals.forEach((v, i) => { doc.text(String(v).substring(0, Math.floor(cw[i] * 1.8)), x + 1, y); x += cw[i]; }); y += 6;
+      });
+      y += 6;
+    }
+
+    const relevantneAkcije = akcije.filter(a => a.akcija || a.odgovorna);
+    if (relevantneAkcije.length > 0) {
+      checkPage(12);
+      doc.setFillColor(26, 122, 94); doc.rect(M, y - 4, CW, 8, 'F');
+      doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
+      doc.text('AKCIJSKI PLAN', M + 2, y + 1); y += 10;
+      const hdr = ['Akcija', 'Odgovorna osoba', 'Rok', 'Status']; const cw = [80, 40, 30, 30]; let x = M;
+      doc.setFillColor(240, 240, 240); doc.rect(M, y - 4, CW, 6, 'F');
+      doc.setTextColor(0, 0, 0); doc.setFontSize(8); doc.setFont('helvetica', 'bold');
+      hdr.forEach((h, i) => { doc.text(h, x + 1, y); x += cw[i]; }); y += 4;
+      doc.setFont('helvetica', 'normal');
+      relevantneAkcije.forEach((a, idx) => {
+        checkPage(8);
+        const vals = [a.akcija, a.odgovorna, a.rok, a.status];
+        x = M; if (idx % 2 === 0) { doc.setFillColor(250, 250, 248); doc.rect(M, y - 3, CW, 6, 'F'); }
+        vals.forEach((v, i) => { doc.text(String(v).substring(0, Math.floor(cw[i] / 1.8)), x + 1, y); x += cw[i]; }); y += 6;
+      });
+      y += 6;
+    }
+
+    if (napomena) {
+      checkPage(15);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(0, 0, 0);
+      doc.text('Napomena:', M, y); y += 5;
+      doc.setFont('helvetica', 'normal');
+      const lines = doc.splitTextToSize(napomena, CW);
+      doc.text(lines, M, y);
+    }
+
+    doc.setFontSize(7); doc.setTextColor(150, 150, 150);
+    doc.text('Izrađeno u Leanopedija App — app.leanopedija.hr', M, 290);
+    doc.save('SMED-' + new Date().toISOString().slice(0, 10) + '.pdf');
+  };
+
   const inputCls = "w-full px-3 py-2 border border-[#e2e2e2] rounded-lg text-sm focus:border-[#1a7a5e] outline-none bg-[#fafaf8]";
   const labelCls = "block text-xs font-medium text-[#5a5a5a] mb-1";
 
@@ -111,9 +215,18 @@ export default function SMEDPage() {
 
       {/* Toolbar */}
       <div className="bg-white border-b border-[#e2e2e2] px-6 py-3">
-        <div className="max-w-[1100px] mx-auto flex gap-3">
+        <div className="max-w-[1100px] mx-auto flex gap-3 flex-wrap items-center">
+          <button onClick={resetForm} className="flex items-center gap-2 border border-[#e2e2e2] text-[#1a1a1a] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#fafaf8] transition-all">
+            <RotateCcw size={16} /> Resetiraj
+          </button>
+          <button onClick={() => window.print()} className="flex items-center gap-2 border border-[#e2e2e2] text-[#1a1a1a] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#fafaf8] transition-all">
+            <Printer size={16} /> Ispis
+          </button>
+          <button onClick={exportPDF} className="flex items-center gap-2 border border-[#e2e2e2] text-[#1a1a1a] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#fafaf8] transition-all">
+            <Download size={16} /> Preuzmi PDF
+          </button>
           <button onClick={handleSave} disabled={saving}
-            className="flex items-center gap-2 bg-[#1a7a5e] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#155f49] transition-all disabled:opacity-70">
+            className="flex items-center gap-2 bg-[#1a7a5e] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#155f49] transition-all disabled:opacity-70 ml-auto">
             {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
             {saving ? 'Spremam...' : 'Spremi u portal'}
           </button>
