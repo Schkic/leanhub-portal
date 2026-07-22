@@ -1,9 +1,11 @@
-import { createClient } from '@supabase/supabase-js';
+import { createBrowserClient } from '@supabase/ssr';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// createBrowserClient (umjesto createClient) drži sesiju i u cookiejima, ne samo
+// u localStorage, tako da je middleware.ts može pročitati server-side.
+export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
 
 // Helper — provjeri auth i trial, redirect ako nije ok
 export async function requireAuth(router: any) {
