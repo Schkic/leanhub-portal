@@ -271,6 +271,39 @@ body {
 /* VSM — TAKT TIME OUTPUT */
 .takt-out { background: var(--green-light); color: var(--green); padding: 8px 12px; border-radius: 8px; font-weight: 600; font-size: 13px; text-align: center; }
 
+/* KAIZEN PLANER — AGENDA */
+.agenda-day { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 12px; overflow: hidden; }
+.agenda-day-header { padding: 10px 14px; background: var(--green-light); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.agenda-day-title { font-size: 13px; font-weight: 600; color: var(--green); }
+.agenda-items { padding: 8px; }
+.agenda-item { display: grid; grid-template-columns: 90px 1fr 120px auto; gap: 8px; align-items: center; padding: 6px 4px; border-bottom: 1px dashed var(--border); }
+.agenda-item:last-child { border-bottom: none; }
+.agenda-item input, .agenda-item select { padding: 6px 8px; border: 1px solid var(--border); border-radius: 5px; font-family: inherit; font-size: 12px; width: 100%; }
+
+/* KAIZEN PLANER — STATUS BADGE */
+.status-badge { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 10px; white-space: nowrap; border: none; font-family: inherit; }
+.status-open { background: #fee2e2; color: #dc2626; }
+.status-progress { background: #fef9c3; color: #ca8a04; }
+.status-done { background: #dcfce7; color: #16a34a; }
+
+/* KAIZEN PLANER — BEFORE/AFTER */
+.ba-card { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.ba-before .ba-header { background: #fee2e2; color: #dc2626; }
+.ba-after .ba-header { background: var(--green-light); color: var(--green); }
+.ba-header { padding: 8px 12px; font-size: 12px; font-weight: 600; border-bottom: 1px solid var(--border); }
+.ba-body { padding: 10px 12px; }
+.ba-body textarea { width: 100%; min-height: 140px; border: 1px solid var(--border); border-radius: 6px; padding: 8px; font-family: inherit; font-size: 12px; background: var(--bg); resize: vertical; }
+.ba-body textarea:focus { outline: none; border-color: var(--green); }
+
+/* KAIZEN PLANER — KPI ROW */
+.kpi-row { display: grid; grid-template-columns: 1fr 120px 120px 120px auto; gap: 8px; align-items: center; margin-bottom: 8px; padding: 8px; border: 1px solid var(--border); border-radius: 7px; }
+.kpi-row input { padding: 6px 8px; border: 1px solid var(--border); border-radius: 5px; font-family: inherit; font-size: 12px; width: 100%; }
+
+@media (max-width: 640px) {
+  .agenda-item { grid-template-columns: 1fr; }
+  .kpi-row { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 768px) {
   .grid-2, .grid-3 { grid-template-columns: 1fr; }
 }

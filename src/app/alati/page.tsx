@@ -138,9 +138,24 @@ const ALATI = [
     btnBg: 'bg-yellow-500 hover:bg-yellow-600',
     vodicBg: '',
   },
+  {
+    href: '/alati/kaizen-planer',
+    vodic: null,
+    icon: '♾️',
+    naziv: 'Kaizen Event Planer',
+    opis: 'Planirajte Kaizen radionicu — tim, agenda, ciljevi i akcijski plan, s praćenjem stanja prije i poslije.',
+    kategorija: 'Planiranje',
+    trajanje: '2–3 dana (event)',
+    razina: 'Napredna',
+    headerBg: 'bg-emerald-50',
+    headerText: 'text-emerald-700',
+    border: 'border-emerald-300',
+    btnBg: 'bg-emerald-600 hover:bg-emerald-700',
+    vodicBg: '',
+  },
 ];
 
-const KATEGORIJE = ['Sve', 'Organizacija', 'Dijagnostika', 'Rješavanje problema', 'Analiza uzroka', 'Mjerenje', 'Kontinuirano poboljšanje', 'Mapiranje', 'Fleksibilnost'];
+const KATEGORIJE = ['Sve', 'Organizacija', 'Dijagnostika', 'Rješavanje problema', 'Analiza uzroka', 'Mjerenje', 'Kontinuirano poboljšanje', 'Mapiranje', 'Fleksibilnost', 'Planiranje'];
 const RAZINE = ['Sve razine', 'Početna', 'Srednja', 'Napredna'];
 
 const RAZINA_COLOR: Record<string, string> = {
