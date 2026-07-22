@@ -62,7 +62,68 @@ body {
 
 .criteria-table { width: 100%; border-collapse: collapse; }
 .criteria-table th { font-size: 11px; font-weight: 500; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.05em; padding: 8px 12px; border-bottom: 1px solid var(--border); text-align: left; background: #fafaf8; }
+.criteria-table th:last-child { text-align: center; }
 .criteria-row td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.criteria-row:last-child td { border-bottom: none; }
+.criteria-row:hover { background: #fafaf8; }
+.criteria-text { font-size: 13px; color: var(--text); line-height: 1.4; }
+.criteria-note { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
+
+/* 5S — SECTION BADGE COLORS */
+.s1 { background: #3b82f6; }
+.s2 { background: #8b5cf6; }
+.s3 { background: #f59e0b; }
+.s4 { background: #10b981; }
+.s5 { background: #ef4444; }
+.section-title-block { flex: 1; }
+.section-title-block h3 { font-size: 15px; font-weight: 600; color: var(--text); }
+.section-title-block p { font-size: 12px; color: var(--text-faint); margin-top: 1px; }
+
+/* INLINE COMMENT */
+.comment-btn { font-size: 11px; color: var(--text-faint); background: none; border: none; cursor: pointer; padding: 2px 0; transition: color 0.12s; }
+.comment-btn:hover { color: var(--green); }
+.inline-comment { display: none; margin-top: 6px; }
+.inline-comment.show { display: block; }
+.inline-comment input { width: 100%; padding: 5px 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 12px; font-family: inherit; }
+
+/* LEGEND */
+.legend { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 16px; }
+.legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-muted); }
+.legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+
+/* SUMMARY */
+.summary-section { background: var(--white); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 16px; padding: 20px; }
+.summary-section h3 { font-size: 15px; font-weight: 600; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.summary-bars { display: flex; flex-direction: column; gap: 10px; }
+.summary-bar-row { display: flex; align-items: center; gap: 10px; }
+.summary-bar-label { font-size: 12px; font-weight: 500; width: 80px; flex-shrink: 0; }
+.summary-bar-track { flex: 1; height: 12px; background: var(--border); border-radius: 6px; overflow: hidden; }
+.summary-bar-fill { height: 100%; border-radius: 6px; transition: width 0.4s ease; background: var(--green); }
+.summary-bar-val { font-size: 12px; font-weight: 600; width: 36px; text-align: right; flex-shrink: 0; }
+.total-score-display { margin-top: 16px; padding: 16px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; }
+.total-score-display .big-score { font-size: 36px; font-weight: 700; }
+.total-score-display .score-info { text-align: right; }
+.total-score-display .score-grade { font-size: 18px; font-weight: 600; }
+.total-score-display .score-tip { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+/* OBSERVATIONS */
+.obs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 4px; }
+.obs-field label { font-size: 12px; font-weight: 500; color: var(--text-muted); display: block; margin-bottom: 5px; }
+.obs-field textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 13px; min-height: 80px; resize: vertical; background: var(--bg); }
+.obs-field textarea:focus { outline: none; border-color: var(--green); }
+
+@media (max-width: 680px) {
+  .meta-grid { grid-template-columns: 1fr; }
+  .obs-grid { grid-template-columns: 1fr; }
+  .criteria-table th:nth-child(2), .criteria-row td:nth-child(2) { display: none; }
+  .toolbar-inner { gap: 8px; }
+  .score-display { margin-left: 0; }
+}
+
+@media print {
+  .toolbar, .comment-btn { display: none !important; }
+  .audit-section { break-inside: avoid; }
+}
 
 /* RATINGS */
 .rating-group { display: flex; gap: 4px; justify-content: center; }
