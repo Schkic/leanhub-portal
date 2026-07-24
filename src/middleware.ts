@@ -7,6 +7,11 @@ import { NextResponse, type NextRequest } from 'next/server';
 // prije nego se stranica uopće isporuči.
 const PROTECTED_PREFIXES = ['/dashboard', '/povijest', '/profil'];
 
+// Rute namijenjene neprijavljenima (landing, login, registracija) — ako je
+// korisnik već prijavljen, nema smisla da mu se prikazuju, pa ga šaljemo
+// izravno na dashboard.
+const GUEST_ONLY_PATHS = ['/', '/prijava', '/registracija'];
+
 function isProtectedPath(pathname: string) {
   const isToolPage = pathname.startsWith('/alati/') && !pathname.startsWith('/alati/vodici');
   const isPrefixed = PROTECTED_PREFIXES.some(
@@ -38,10 +43,17 @@ export async function middleware(request: NextRequest) {
   );
 
   const { data: { user } } = await supabase.auth.getUser();
+  const pathname = request.nextUrl.pathname;
 
-  if (isProtectedPath(request.nextUrl.pathname) && !user) {
+  if (isProtectedPath(pathname) && !user) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = '/prijava';
+    return NextResponse.redirect(redirectUrl);
+  }
+
+  if (GUEST_ONLY_PATHS.includes(pathname) && user) {
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname = '/dashboard';
     return NextResponse.redirect(redirectUrl);
   }
 
