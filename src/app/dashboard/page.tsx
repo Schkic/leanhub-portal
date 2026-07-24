@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase, requireAuth } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import { User, Plus, Trash2, Check, EyeOff, Settings2, Loader2, X, ArrowUpRight } from 'lucide-react';
+import { User, Plus, Trash2, Check, EyeOff, Settings2, Loader2, X, ArrowUpRight, Pencil } from 'lucide-react';
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, ReferenceLine, PieChart, Pie, Cell, Legend
@@ -25,6 +25,18 @@ const calcStrojAvg = (strojevi: any[]) => {
     return smjeneOEE.length > 0 ? smjeneOEE.reduce((a: number, b: number) => a + b, 0) / smjeneOEE.length : 0;
   }).filter(v => v > 0);
   return results.length > 0 ? +(results.reduce((a, b) => a + b, 0) / results.length).toFixed(1) : 0;
+};
+
+const TODO_BOJE = ['#1a7a5e', '#2563eb', '#dc2626', '#ca8a04', '#7c3aed', '#0891b2', '#ea580c', '#6b7280'];
+
+const formatTodoDatum = (t: any) => {
+  const created = new Date(t.created_at);
+  const updated = t.updated_at ? new Date(t.updated_at) : null;
+  const fmt = (d: Date) => d.toLocaleDateString('hr-HR', { day: 'numeric', month: 'short' });
+  if (updated && updated.getTime() - created.getTime() > 60000) {
+    return `Uređeno ${fmt(updated)}`;
+  }
+  return `Kreirano ${fmt(created)}`;
 };
 
 const getOEEColor = (oee: number) => {
@@ -60,7 +72,11 @@ export default function DashboardPage() {
   const [editMode, setEditMode] = useState(false);
   const [todos, setTodos] = useState<any[]>([]);
   const [newTodo, setNewTodo] = useState('');
+  const [newTodoBoja, setNewTodoBoja] = useState('#1a7a5e');
   const [todoBusy, setTodoBusy] = useState(false);
+  const [editingTodoId, setEditingTodoId] = useState<string | null>(null);
+  const [editTodoText, setEditTodoText] = useState('');
+  const [editTodoBoja, setEditTodoBoja] = useState('#1a7a5e');
   const router = useRouter();
 
   useEffect(() => {
@@ -170,7 +186,7 @@ export default function DashboardPage() {
     if (!user || !newTodo.trim()) return;
     setTodoBusy(true);
     const { data, error } = await supabase.from('dashboard_todos')
-      .insert({ user_id: user.id, tekst: newTodo.trim() })
+      .insert({ user_id: user.id, tekst: newTodo.trim(), boja: newTodoBoja })
       .select().single();
     setTodoBusy(false);
     if (!error && data) {
@@ -180,13 +196,33 @@ export default function DashboardPage() {
   };
 
   const toggleTodo = async (id: string, gotovo: boolean) => {
-    setTodos(prev => prev.map(t => t.id === id ? { ...t, gotovo: !gotovo } : t));
-    await supabase.from('dashboard_todos').update({ gotovo: !gotovo }).eq('id', id);
+    const updated_at = new Date().toISOString();
+    setTodos(prev => prev.map(t => t.id === id ? { ...t, gotovo: !gotovo, updated_at } : t));
+    await supabase.from('dashboard_todos').update({ gotovo: !gotovo, updated_at }).eq('id', id);
   };
 
   const deleteTodo = async (id: string) => {
     setTodos(prev => prev.filter(t => t.id !== id));
     await supabase.from('dashboard_todos').delete().eq('id', id);
+  };
+
+  const startEdit = (t: any) => {
+    setEditingTodoId(t.id);
+    setEditTodoText(t.tekst);
+    setEditTodoBoja(t.boja || '#1a7a5e');
+  };
+
+  const cancelEdit = () => {
+    setEditingTodoId(null);
+    setEditTodoText('');
+  };
+
+  const saveEdit = async (id: string) => {
+    if (!editTodoText.trim()) return;
+    const updated_at = new Date().toISOString();
+    setTodos(prev => prev.map(t => t.id === id ? { ...t, tekst: editTodoText.trim(), boja: editTodoBoja, updated_at } : t));
+    setEditingTodoId(null);
+    await supabase.from('dashboard_todos').update({ tekst: editTodoText.trim(), boja: editTodoBoja, updated_at }).eq('id', id);
   };
 
   const getScoreColor = (score: number) => {
@@ -534,36 +570,86 @@ export default function DashboardPage() {
 
               <p className="text-[10px] font-bold text-[#9a9a9a] uppercase tracking-wider mb-2">✏️ Ručno dodano</p>
 
-              <form onSubmit={e => { e.preventDefault(); addTodo(); }} className="flex gap-2 mb-4">
-                <input
-                  type="text"
-                  value={newTodo}
-                  onChange={e => setNewTodo(e.target.value)}
-                  placeholder="Dodaj hitno..."
-                  className="flex-1 px-3 py-2 border border-[#e2e2e2] rounded-lg text-sm focus:border-[#1a7a5e] outline-none bg-[#fafaf8]"
-                />
-                <button type="submit" disabled={todoBusy || !newTodo.trim()} className="w-9 h-9 shrink-0 bg-[#1a7a5e] text-white rounded-lg flex items-center justify-center hover:bg-[#155f49] transition-all disabled:opacity-50">
-                  {todoBusy ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
-                </button>
+              <form onSubmit={e => { e.preventDefault(); addTodo(); }} className="mb-4">
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={newTodo}
+                    onChange={e => setNewTodo(e.target.value)}
+                    placeholder="Dodaj hitno..."
+                    className="flex-1 px-3 py-2 border border-[#e2e2e2] rounded-lg text-sm focus:border-[#1a7a5e] outline-none bg-[#fafaf8]"
+                  />
+                  <button type="submit" disabled={todoBusy || !newTodo.trim()} className="w-9 h-9 shrink-0 bg-[#1a7a5e] text-white rounded-lg flex items-center justify-center hover:bg-[#155f49] transition-all disabled:opacity-50">
+                    {todoBusy ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
+                  </button>
+                </div>
+                <div className="flex items-center gap-1.5 px-0.5">
+                  {TODO_BOJE.map(boja => (
+                    <button
+                      key={boja}
+                      type="button"
+                      onClick={() => setNewTodoBoja(boja)}
+                      className="w-5 h-5 rounded-full flex items-center justify-center transition-transform hover:scale-110"
+                      style={{ backgroundColor: boja, outline: newTodoBoja === boja ? `2px solid ${boja}` : 'none', outlineOffset: 2 }}
+                      aria-label={`Boja ${boja}`}
+                    />
+                  ))}
+                </div>
               </form>
 
               {todos.length === 0 ? (
                 <p className="text-xs text-[#9a9a9a] text-center py-4">Nemate dodanih prioriteta. Dodajte što vam je hitno.</p>
               ) : (
-                <div className="space-y-1.5 max-h-[320px] overflow-y-auto">
+                <div className="space-y-1.5 max-h-[360px] overflow-y-auto">
                   {todos.map(t => (
-                    <div key={t.id} className="flex items-center gap-2.5 group px-1 py-1.5 rounded-lg hover:bg-[#fafaf8]">
-                      <button
-                        onClick={() => toggleTodo(t.id, t.gotovo)}
-                        className={`w-5 h-5 shrink-0 rounded-full border-2 flex items-center justify-center transition-all ${t.gotovo ? 'bg-[#1a7a5e] border-[#1a7a5e]' : 'border-[#d0d0d0] hover:border-[#1a7a5e]'}`}
-                      >
-                        {t.gotovo && <Check size={11} className="text-white" />}
-                      </button>
-                      <span className={`flex-1 text-sm ${t.gotovo ? 'line-through text-[#c0c0c0]' : 'text-[#1a1a1a]'}`}>{t.tekst}</span>
-                      <button onClick={() => deleteTodo(t.id)} className="opacity-0 group-hover:opacity-100 text-[#c0c0c0] hover:text-red-500 transition-all shrink-0">
-                        <X size={14} />
-                      </button>
-                    </div>
+                    editingTodoId === t.id ? (
+                      <div key={t.id} className="p-2 rounded-lg bg-[#fafaf8] border border-[#e2e2e2]">
+                        <input
+                          type="text"
+                          value={editTodoText}
+                          onChange={e => setEditTodoText(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter') saveEdit(t.id); if (e.key === 'Escape') cancelEdit(); }}
+                          autoFocus
+                          className="w-full px-2 py-1.5 border border-[#e2e2e2] rounded-md text-sm outline-none focus:border-[#1a7a5e] bg-white mb-2"
+                        />
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            {TODO_BOJE.map(boja => (
+                              <button
+                                key={boja}
+                                type="button"
+                                onClick={() => setEditTodoBoja(boja)}
+                                className="w-4.5 h-4.5 rounded-full transition-transform hover:scale-110"
+                                style={{ backgroundColor: boja, width: 16, height: 16, outline: editTodoBoja === boja ? `2px solid ${boja}` : 'none', outlineOffset: 2 }}
+                                aria-label={`Boja ${boja}`}
+                              />
+                            ))}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <button onClick={cancelEdit} className="w-6 h-6 flex items-center justify-center text-[#9a9a9a] hover:text-red-500 rounded-md hover:bg-white"><X size={13} /></button>
+                            <button onClick={() => saveEdit(t.id)} className="w-6 h-6 flex items-center justify-center text-white bg-[#1a7a5e] hover:bg-[#155f49] rounded-md"><Check size={13} /></button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div key={t.id} className="flex items-start gap-2.5 group px-1 py-1.5 rounded-lg hover:bg-[#fafaf8]">
+                        <button
+                          onClick={() => toggleTodo(t.id, t.gotovo)}
+                          className={`w-5 h-5 shrink-0 rounded-full border-2 flex items-center justify-center transition-all mt-0.5 ${t.gotovo ? 'border-transparent' : 'hover:opacity-70'}`}
+                          style={{ backgroundColor: t.gotovo ? (t.boja || '#1a7a5e') : 'transparent', borderColor: t.gotovo ? (t.boja || '#1a7a5e') : (t.boja || '#d0d0d0') }}
+                        >
+                          {t.gotovo && <Check size={11} className="text-white" />}
+                        </button>
+                        <div className="flex-1 min-w-0">
+                          <span className={`block text-sm ${t.gotovo ? 'line-through text-[#c0c0c0]' : 'text-[#1a1a1a]'}`}>{t.tekst}</span>
+                          <span className="text-[10px] text-[#c0c0c0]">{formatTodoDatum(t)}</span>
+                        </div>
+                        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all shrink-0">
+                          <button onClick={() => startEdit(t)} className="text-[#c0c0c0] hover:text-[#1a7a5e] p-1"><Pencil size={13} /></button>
+                          <button onClick={() => deleteTodo(t.id)} className="text-[#c0c0c0] hover:text-red-500 p-1"><X size={14} /></button>
+                        </div>
+                      </div>
+                    )
                   ))}
                 </div>
               )}
