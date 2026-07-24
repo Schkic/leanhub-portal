@@ -26,12 +26,7 @@ export default function Header() {
         </a>
 
         <nav className="hidden md:flex items-center gap-1 flex-1 ml-8">
-          {user ? (
-            <>
-              <a href="/alati" className="text-sm text-[#5a5a5a] px-3 py-1.5 rounded-md hover:bg-[#e8f5f0] hover:text-[#1a7a5e] transition-colors font-medium">Alati</a>
-              <a href="/povijest" className="text-sm text-[#5a5a5a] px-3 py-1.5 rounded-md hover:bg-[#e8f5f0] hover:text-[#1a7a5e] transition-colors">Moja povijest</a>
-            </>
-          ) : (
+          {!user && (
             <a href="/alati" className="text-sm text-[#5a5a5a] px-3 py-1.5 rounded-md hover:bg-[#e8f5f0] hover:text-[#1a7a5e] transition-colors">Isprobaj Alate</a>
           )}
         </nav>

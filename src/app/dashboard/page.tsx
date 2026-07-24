@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase, requireAuth } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import { User } from 'lucide-react';
+import { User, Plus, Trash2, Check, EyeOff, Settings2, Loader2, X } from 'lucide-react';
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, ReferenceLine, PieChart, Pie, Cell, Legend
@@ -54,6 +54,12 @@ export default function DashboardPage() {
 
   const [loading, setLoading] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'annual'>('monthly');
+  const [totalZapisa, setTotalZapisa] = useState(0);
+  const [hiddenAlati, setHiddenAlati] = useState<string[]>([]);
+  const [editMode, setEditMode] = useState(false);
+  const [todos, setTodos] = useState<any[]>([]);
+  const [newTodo, setNewTodo] = useState('');
+  const [todoBusy, setTodoBusy] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -65,23 +71,26 @@ export default function DashboardPage() {
       const { data: profileData } = await supabase
         .from('profiles').select('*').eq('id', user.id).single();
       setProfile(profileData);
+      setHiddenAlati(profileData?.dashboard_hidden_alati || []);
 
-      const [a, g, a3, z, o, k, v, ish, smed, oeeAll, auditAll, kaizenAll] = await Promise.all([
-        supabase.from('audits_5s').select('id, created_at, firma, lokacija, total_score, datum').order('created_at', { ascending: false }).limit(2),
-        supabase.from('gemba_walk').select('id, created_at, voditelj, lokacija, datum').order('created_at', { ascending: false }).limit(2),
-        supabase.from('a3_obrazac').select('id, created_at, naslov, vlasnik, datum_otvaranja, odjel').order('created_at', { ascending: false }).limit(2),
-        supabase.from('pet_zasto').select('id, created_at, voditelj, odjel, datum, kategorija').order('created_at', { ascending: false }).limit(2),
-        supabase.from('oee_kalkulator').select('id, created_at, pogon, period, strojevi').order('created_at', { ascending: false }).limit(2),
-        supabase.from('kaizen_prijedlog').select('id, created_at, odjel, datum, kategorija, prioritet, status').order('created_at', { ascending: false }).limit(2),
-        supabase.from('vsm_dijagram').select('id, created_at, naziv, elementi').order('created_at', { ascending: false }).limit(2),
-        supabase.from('ishikawa').select('id, created_at, problem, odjel, datum').order('created_at', { ascending: false }).limit(2),
-        supabase.from('smed').select('id, created_at, stroj, proces, datum, aktivnosti').order('created_at', { ascending: false }).limit(2),
+      const [a, g, a3, z, o, k, v, ish, smed, oeeAll, auditAll, kaizenAll, todosRes] = await Promise.all([
+        supabase.from('audits_5s').select('id, created_at, firma, lokacija, total_score, datum', { count: 'exact' }).order('created_at', { ascending: false }).limit(2),
+        supabase.from('gemba_walk').select('id, created_at, voditelj, lokacija, datum', { count: 'exact' }).order('created_at', { ascending: false }).limit(2),
+        supabase.from('a3_obrazac').select('id, created_at, naslov, vlasnik, datum_otvaranja, odjel', { count: 'exact' }).order('created_at', { ascending: false }).limit(2),
+        supabase.from('pet_zasto').select('id, created_at, voditelj, odjel, datum, kategorija', { count: 'exact' }).order('created_at', { ascending: false }).limit(2),
+        supabase.from('oee_kalkulator').select('id, created_at, pogon, period, strojevi', { count: 'exact' }).order('created_at', { ascending: false }).limit(2),
+        supabase.from('kaizen_prijedlog').select('id, created_at, odjel, datum, kategorija, prioritet, status', { count: 'exact' }).order('created_at', { ascending: false }).limit(2),
+        supabase.from('vsm_dijagram').select('id, created_at, naziv, elementi', { count: 'exact' }).order('created_at', { ascending: false }).limit(2),
+        supabase.from('ishikawa').select('id, created_at, problem, odjel, datum', { count: 'exact' }).order('created_at', { ascending: false }).limit(2),
+        supabase.from('smed').select('id, created_at, stroj, proces, datum, aktivnosti', { count: 'exact' }).order('created_at', { ascending: false }).limit(2),
         // KPI povijest — zadnjih 12 OEE zapisa
         supabase.from('oee_kalkulator').select('id, period, created_at, strojevi').eq('user_id', user.id).order('created_at', { ascending: true }).limit(12),
         // 5S audit povijest
         supabase.from('audits_5s').select('id, total_score, datum, created_at').eq('user_id', user.id).order('created_at', { ascending: true }).limit(12),
         // Kaizen po statusu
         supabase.from('kaizen_prijedlog').select('status').eq('user_id', user.id),
+        // To-do lista
+        supabase.from('dashboard_todos').select('*').eq('user_id', user.id).order('created_at', { ascending: true }),
       ]);
 
       setRecentAudits(a.data || []);
@@ -93,6 +102,10 @@ export default function DashboardPage() {
       setRecentVSM(v.data || []);
       setRecentIshikawa(ish.data || []);
       setRecentSMED(smed.data || []);
+      setTodos(todosRes.data || []);
+
+      const counts = [a.count, g.count, a3.count, z.count, o.count, k.count, v.count, ish.count, smed.count];
+      setTotalZapisa(counts.reduce((sum: number, c) => sum + (c || 0), 0));
 
       // OEE graf podaci
       const oeeGraf = (oeeAll.data || []).map((r: any) => ({
@@ -140,6 +153,38 @@ export default function DashboardPage() {
     if (data.url) window.location.href = data.url;
   };
 
+  const toggleHideAlat = async (href: string) => {
+    if (!user) return;
+    const updated = hiddenAlati.includes(href)
+      ? hiddenAlati.filter(h => h !== href)
+      : [...hiddenAlati, href];
+    setHiddenAlati(updated);
+    await supabase.from('profiles').update({ dashboard_hidden_alati: updated }).eq('id', user.id);
+  };
+
+  const addTodo = async () => {
+    if (!user || !newTodo.trim()) return;
+    setTodoBusy(true);
+    const { data, error } = await supabase.from('dashboard_todos')
+      .insert({ user_id: user.id, tekst: newTodo.trim() })
+      .select().single();
+    setTodoBusy(false);
+    if (!error && data) {
+      setTodos(prev => [...prev, data]);
+      setNewTodo('');
+    }
+  };
+
+  const toggleTodo = async (id: string, gotovo: boolean) => {
+    setTodos(prev => prev.map(t => t.id === id ? { ...t, gotovo: !gotovo } : t));
+    await supabase.from('dashboard_todos').update({ gotovo: !gotovo }).eq('id', id);
+  };
+
+  const deleteTodo = async (id: string) => {
+    setTodos(prev => prev.filter(t => t.id !== id));
+    await supabase.from('dashboard_todos').delete().eq('id', id);
+  };
+
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'bg-[#dcfce7] text-[#16a34a]';
     if (score >= 60) return 'bg-[#fef9c3] text-[#ca8a04]';
@@ -158,6 +203,8 @@ export default function DashboardPage() {
     : null;
   const latestOEE = oeeHistory.length > 0 ? oeeHistory[oeeHistory.length - 1].OEE : null;
   const latestAudit = auditHistory.length > 0 ? auditHistory[auditHistory.length - 1].rezultat : null;
+  const otvoreniKaizen = kaizenStats.filter(k => k.name !== 'Završeno' && k.name !== 'Odbijeno').reduce((a, b) => a + b.value, 0);
+  const aktivniTodos = todos.filter(t => !t.gotovo);
 
   const alati = [
     { href: '/alati/5s-audit',        icon: '📋', label: 'Novi 5S Audit',        opis: 'Provjera čistoće i organizacije.',    bg: 'bg-[#e8f5f0] text-[#1a7a5e]' },
@@ -267,6 +314,28 @@ export default function DashboardPage() {
           <p className="text-[#5a5a5a]">Vaš Lean upravljački centar</p>
         </div>
 
+        {/* ── STAT KARTICE ── */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="bg-white border border-[#e2e2e2] rounded-2xl p-4">
+            <p className="text-[11px] font-bold text-[#9a9a9a] uppercase tracking-wider mb-1">Ukupno zapisa</p>
+            <p className="text-2xl font-bold text-[#1a1a1a]">{totalZapisa}</p>
+          </div>
+          <div className="bg-white border border-[#e2e2e2] rounded-2xl p-4">
+            <p className="text-[11px] font-bold text-[#9a9a9a] uppercase tracking-wider mb-1">Zadnji OEE</p>
+            <p className="text-2xl font-bold" style={{ color: latestOEE !== null ? getOEEColor(latestOEE) : '#c0c0c0' }}>
+              {latestOEE !== null ? `${latestOEE}%` : '—'}
+            </p>
+          </div>
+          <div className="bg-white border border-[#e2e2e2] rounded-2xl p-4">
+            <p className="text-[11px] font-bold text-[#9a9a9a] uppercase tracking-wider mb-1">Zadnji 5S rezultat</p>
+            <p className="text-2xl font-bold text-[#1a1a1a]">{latestAudit !== null ? `${latestAudit}/100` : '—'}</p>
+          </div>
+          <div className="bg-white border border-[#e2e2e2] rounded-2xl p-4">
+            <p className="text-[11px] font-bold text-[#9a9a9a] uppercase tracking-wider mb-1">Otvoreni Kaizen prijedlozi</p>
+            <p className="text-2xl font-bold text-[#1a1a1a]">{otvoreniKaizen}</p>
+          </div>
+        </div>
+
         {/* ── KPI GRAFOVI ── */}
         {(oeeHistory.length > 0 || auditHistory.length > 0 || kaizenStats.length > 0) && (
           <div className="mb-8">
@@ -367,14 +436,44 @@ export default function DashboardPage() {
           <div className="md:col-span-2 space-y-6">
 
             {/* Alati grid */}
-            <div className="grid grid-cols-3 gap-3">
-              {alati.map(a => (
-                <a key={a.href} href={a.href} className="bg-white border border-[#e2e2e2] p-4 rounded-2xl hover:border-[#1a7a5e] hover:shadow-lg transition-all group">
-                  <div className={`w-10 h-10 ${a.bg} rounded-xl flex items-center justify-center mb-3 text-lg group-hover:scale-110 transition-transform`}>{a.icon}</div>
-                  <h3 className="text-xs font-bold mb-1">{a.label}</h3>
-                  <p className="text-[10px] text-[#5a5a5a]">{a.opis}</p>
-                </a>
-              ))}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-bold text-[#9a9a9a] uppercase tracking-wider">🛠️ Vaši alati</h2>
+                <button
+                  onClick={() => setEditMode(!editMode)}
+                  className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all ${editMode ? 'bg-[#1a7a5e] text-white' : 'text-[#5a5a5a] hover:bg-[#e8f5f0] hover:text-[#1a7a5e]'}`}
+                >
+                  <Settings2 size={13} /> {editMode ? 'Gotovo' : 'Prikaži/sakrij'}
+                </button>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                {alati.filter(a => editMode || !hiddenAlati.includes(a.href)).map(a => (
+                  <div key={a.href} className="relative group">
+                    <a href={editMode ? undefined : a.href}
+                      onClick={e => { if (editMode) e.preventDefault(); }}
+                      className={`block bg-white border border-[#e2e2e2] p-4 rounded-2xl transition-all ${editMode ? (hiddenAlati.includes(a.href) ? 'opacity-40' : '') : 'hover:border-[#1a7a5e] hover:shadow-lg'}`}
+                    >
+                      <div className={`w-10 h-10 ${a.bg} rounded-xl flex items-center justify-center mb-3 text-lg ${!editMode && 'group-hover:scale-110'} transition-transform`}>{a.icon}</div>
+                      <h3 className="text-xs font-bold mb-1">{a.label}</h3>
+                      <p className="text-[10px] text-[#5a5a5a]">{a.opis}</p>
+                    </a>
+                    {editMode && (
+                      <button
+                        onClick={() => toggleHideAlat(a.href)}
+                        title={hiddenAlati.includes(a.href) ? 'Prikaži alat' : 'Sakrij alat'}
+                        className="absolute top-2 right-2 w-6 h-6 bg-white border border-[#e2e2e2] rounded-full flex items-center justify-center text-[#9a9a9a] hover:text-[#1a7a5e] hover:border-[#1a7a5e] shadow-sm"
+                      >
+                        {hiddenAlati.includes(a.href) ? <Plus size={12} /> : <EyeOff size={12} />}
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {!editMode && hiddenAlati.length > 0 && (
+                <button onClick={() => setEditMode(true)} className="text-xs text-[#9a9a9a] hover:text-[#1a7a5e] mt-2">
+                  {hiddenAlati.length} {hiddenAlati.length === 1 ? 'alat sakriven' : 'alata sakriveno'} — upravljaj →
+                </button>
+              )}
             </div>
 
             {/* Nedavni zapisi */}
@@ -390,7 +489,52 @@ export default function DashboardPage() {
           </div>
 
           {/* Status sidebar */}
-          <div>
+          <div className="space-y-6">
+
+            {/* To-Do lista */}
+            <div className="bg-white border border-[#e2e2e2] rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xs font-bold text-[#9a9a9a] uppercase tracking-wider">✅ Moji prioriteti</h3>
+                {aktivniTodos.length > 0 && (
+                  <span className="text-xs font-bold text-[#1a7a5e] bg-[#e8f5f0] px-2 py-0.5 rounded-full">{aktivniTodos.length}</span>
+                )}
+              </div>
+
+              <form onSubmit={e => { e.preventDefault(); addTodo(); }} className="flex gap-2 mb-4">
+                <input
+                  type="text"
+                  value={newTodo}
+                  onChange={e => setNewTodo(e.target.value)}
+                  placeholder="Dodaj hitno..."
+                  className="flex-1 px-3 py-2 border border-[#e2e2e2] rounded-lg text-sm focus:border-[#1a7a5e] outline-none bg-[#fafaf8]"
+                />
+                <button type="submit" disabled={todoBusy || !newTodo.trim()} className="w-9 h-9 shrink-0 bg-[#1a7a5e] text-white rounded-lg flex items-center justify-center hover:bg-[#155f49] transition-all disabled:opacity-50">
+                  {todoBusy ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
+                </button>
+              </form>
+
+              {todos.length === 0 ? (
+                <p className="text-xs text-[#9a9a9a] text-center py-4">Nemate dodanih prioriteta. Dodajte što vam je hitno.</p>
+              ) : (
+                <div className="space-y-1.5 max-h-[320px] overflow-y-auto">
+                  {todos.map(t => (
+                    <div key={t.id} className="flex items-center gap-2.5 group px-1 py-1.5 rounded-lg hover:bg-[#fafaf8]">
+                      <button
+                        onClick={() => toggleTodo(t.id, t.gotovo)}
+                        className={`w-5 h-5 shrink-0 rounded-full border-2 flex items-center justify-center transition-all ${t.gotovo ? 'bg-[#1a7a5e] border-[#1a7a5e]' : 'border-[#d0d0d0] hover:border-[#1a7a5e]'}`}
+                      >
+                        {t.gotovo && <Check size={11} className="text-white" />}
+                      </button>
+                      <span className={`flex-1 text-sm ${t.gotovo ? 'line-through text-[#c0c0c0]' : 'text-[#1a1a1a]'}`}>{t.tekst}</span>
+                      <button onClick={() => deleteTodo(t.id)} className="opacity-0 group-hover:opacity-100 text-[#c0c0c0] hover:text-red-500 transition-all shrink-0">
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="bg-white border border-[#e2e2e2] rounded-2xl p-6">
               <h3 className="text-xs font-bold text-[#9a9a9a] uppercase tracking-wider mb-4">Vaš status</h3>
               <div className="flex items-center gap-3 mb-6">

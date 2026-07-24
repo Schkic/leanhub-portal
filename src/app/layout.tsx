@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Header from "@/components/Header";
+import AppShell from "@/components/AppShell";
 
 export const metadata: Metadata = {
   title: "Leanopedija Portal — Pametni Lean alati",
@@ -23,7 +24,7 @@ export default function RootLayout({
         <Header />
 
         <main>
-          {children}
+          <AppShell>{children}</AppShell>
         </main>
 
         <footer className="bg-white border-t border-[#e2e2e2] p-6 text-center text-xs text-[#9a9a9a] mt-12">
