@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase, requireAuth } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import { User, Plus, Trash2, Check, EyeOff, Settings2, Loader2, X } from 'lucide-react';
+import { User, Plus, Trash2, Check, EyeOff, Settings2, Loader2, X, ArrowUpRight } from 'lucide-react';
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, ReferenceLine, PieChart, Pie, Cell, Legend
@@ -51,6 +51,7 @@ export default function DashboardPage() {
   const [oeeHistory, setOeeHistory] = useState<any[]>([]);
   const [auditHistory, setAuditHistory] = useState<any[]>([]);
   const [kaizenStats, setKaizenStats] = useState<any[]>([]);
+  const [kaizenOpenTasks, setKaizenOpenTasks] = useState<any[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'annual'>('monthly');
@@ -87,8 +88,8 @@ export default function DashboardPage() {
         supabase.from('oee_kalkulator').select('id, period, created_at, strojevi').eq('user_id', user.id).order('created_at', { ascending: true }).limit(12),
         // 5S audit povijest
         supabase.from('audits_5s').select('id, total_score, datum, created_at').eq('user_id', user.id).order('created_at', { ascending: true }).limit(12),
-        // Kaizen po statusu
-        supabase.from('kaizen_prijedlog').select('status').eq('user_id', user.id),
+        // Kaizen po statusu + otvoreni prijedlozi za "automatske" zadatke
+        supabase.from('kaizen_prijedlog').select('id, status, prob_opis, kategorija, prioritet, created_at').eq('user_id', user.id).order('created_at', { ascending: false }),
         // To-do lista
         supabase.from('dashboard_todos').select('*').eq('user_id', user.id).order('created_at', { ascending: true }),
       ]);
@@ -133,6 +134,9 @@ export default function DashboardPage() {
         'U provedbi': '#7c3aed', 'Završeno': '#1a7a5e', 'Odbijeno': '#dc2626'
       };
       setKaizenStats(Object.entries(statusCounts).map(([name, value]) => ({ name, value, color: COLORS[name] || '#9a9a9a' })));
+
+      const otvoreni = (kaizenAll.data || []).filter((r: any) => r.status !== 'Završeno' && r.status !== 'Odbijeno');
+      setKaizenOpenTasks(otvoreni);
 
       setLoading(false);
     };
@@ -495,10 +499,40 @@ export default function DashboardPage() {
             <div className="bg-white border border-[#e2e2e2] rounded-2xl p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xs font-bold text-[#9a9a9a] uppercase tracking-wider">✅ Moji prioriteti</h3>
-                {aktivniTodos.length > 0 && (
-                  <span className="text-xs font-bold text-[#1a7a5e] bg-[#e8f5f0] px-2 py-0.5 rounded-full">{aktivniTodos.length}</span>
+                {(aktivniTodos.length + kaizenOpenTasks.length) > 0 && (
+                  <span className="text-xs font-bold text-[#1a7a5e] bg-[#e8f5f0] px-2 py-0.5 rounded-full">{aktivniTodos.length + kaizenOpenTasks.length}</span>
                 )}
               </div>
+
+              {/* Automatski zadaci iz Kaizen prijedloga */}
+              {kaizenOpenTasks.length > 0 && (
+                <div className="mb-5">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-[10px] font-bold text-[#9a9a9a] uppercase tracking-wider">💡 Iz Kaizen prijedloga</p>
+                    <span className="text-[10px] font-bold text-[#9a9a9a] bg-[#fafaf8] px-1.5 py-0.5 rounded-full">{kaizenOpenTasks.length}</span>
+                  </div>
+                  <div className="space-y-1.5 max-h-[220px] overflow-y-auto mb-1">
+                    {kaizenOpenTasks.slice(0, 8).map(kt => (
+                      <a
+                        key={kt.id}
+                        href="/alati/kaizen-prijedlog/pracenje"
+                        className="flex items-start gap-2.5 group px-1 py-1.5 rounded-lg hover:bg-[#fafaf8] transition-all"
+                      >
+                        <div className="w-5 h-5 shrink-0 rounded-full bg-[#fff7ed] text-[#ca8a04] flex items-center justify-center mt-0.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#ca8a04]" />
+                        </div>
+                        <span className="flex-1 text-sm text-[#1a1a1a] line-clamp-2">{kt.prob_opis || kt.kategorija || 'Kaizen prijedlog'}</span>
+                        <ArrowUpRight size={14} className="text-[#c0c0c0] group-hover:text-[#1a7a5e] shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-all" />
+                      </a>
+                    ))}
+                  </div>
+                  <a href="/alati/kaizen-prijedlog/pracenje" className="text-[11px] text-[#1a7a5e] font-semibold hover:underline">Otvori sustav praćenja →</a>
+                </div>
+              )}
+
+              {kaizenOpenTasks.length > 0 && <div className="border-t border-[#f0f0f0] mb-4" />}
+
+              <p className="text-[10px] font-bold text-[#9a9a9a] uppercase tracking-wider mb-2">✏️ Ručno dodano</p>
 
               <form onSubmit={e => { e.preventDefault(); addTodo(); }} className="flex gap-2 mb-4">
                 <input
