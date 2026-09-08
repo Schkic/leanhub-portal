@@ -77,6 +77,7 @@ export default function DashboardPage() {
   const [editingTodoId, setEditingTodoId] = useState<string | null>(null);
   const [editTodoText, setEditTodoText] = useState('');
   const [editTodoBoja, setEditTodoBoja] = useState('#1a7a5e');
+  const [todoTab, setTodoTab] = useState<'kaizen' | 'moji'>('moji');
   const router = useRouter();
 
   useEffect(() => {
@@ -153,6 +154,7 @@ export default function DashboardPage() {
 
       const otvoreni = (kaizenAll.data || []).filter((r: any) => r.status !== 'Završeno' && r.status !== 'Odbijeno');
       setKaizenOpenTasks(otvoreni);
+      if (otvoreni.length > 0) setTodoTab('kaizen');
 
       setLoading(false);
     };
@@ -347,11 +349,65 @@ export default function DashboardPage() {
     <div className="bg-[#fafaf8] min-h-screen">
       <div className="max-w-[1200px] mx-auto px-6 py-10">
 
-        <div className="mb-8">
-          <h1 className="font-serif text-4xl text-[#1a1a1a] mb-1">
-            Dobrodošli, {user?.user_metadata?.full_name || 'Korisniče'}
-          </h1>
-          <p className="text-[#5a5a5a]">Vaš Lean upravljački centar</p>
+        <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
+          <div>
+            <h1 className="font-serif text-4xl text-[#1a1a1a] mb-1">
+              Dobrodošli, {user?.user_metadata?.full_name || 'Korisniče'}
+            </h1>
+            <p className="text-[#5a5a5a]">Vaš Lean upravljački centar</p>
+          </div>
+          <span className="rounded-lg border border-[#e2e2e2] bg-white px-3 py-1.5 text-xs font-bold text-[#5a5a5a] shadow-sm">
+            Danas: {new Date().toLocaleDateString('hr-HR', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </span>
+        </div>
+
+        {/* ── STATUS TRAKA ── */}
+        <div className="bg-white border border-[#e2e2e2] rounded-2xl px-5 py-4 mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 shrink-0 bg-[#fafaf8] border border-[#e2e2e2] rounded-full flex items-center justify-center text-[#1a7a5e]">
+              <User size={18} />
+            </div>
+            <div className="min-w-0">
+              <div className="text-sm font-bold text-[#1a1a1a] truncate">{user?.email}</div>
+              {isPro ? (
+                <div className="text-[11px] text-[#1a7a5e] font-bold">PRO PLAN ✨</div>
+              ) : (
+                <div className="text-[11px] text-[#9a9a9a] font-bold">
+                  PROBNI PERIOD{trialDaysLeft !== null && ` · JOŠ ${trialDaysLeft} ${trialDaysLeft === 1 ? 'DAN' : 'DANA'}`}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {isPro ? (
+            <span className="shrink-0 bg-[#e8f5f0] text-[#1a7a5e] text-xs font-bold px-4 py-2 rounded-full">✅ PRO plan aktivan</span>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <p className="text-xs text-[#5a5a5a] max-w-[220px] leading-snug hidden md:block">
+                {trialDaysLeft !== null
+                  ? <>Preostalo <strong>{trialDaysLeft} {trialDaysLeft === 1 ? 'dan' : 'dana'}</strong> probnog perioda.</>
+                  : <>Isprobajte PRO <strong>14 dana besplatno</strong>.</>
+                }
+              </p>
+              <div className="flex gap-1 p-1 bg-[#fafaf8] border border-[#e2e2e2] rounded-lg">
+                <button
+                  onClick={() => setSelectedPlan('monthly')}
+                  className={`px-2.5 py-1.5 text-[11px] font-semibold rounded-md transition-all ${selectedPlan === 'monthly' ? 'bg-white shadow text-[#1a7a5e]' : 'text-[#5a5a5a]'}`}
+                >
+                  Mjesečno
+                </button>
+                <button
+                  onClick={() => setSelectedPlan('annual')}
+                  className={`px-2.5 py-1.5 text-[11px] font-semibold rounded-md transition-all ${selectedPlan === 'annual' ? 'bg-white shadow text-[#1a7a5e]' : 'text-[#5a5a5a]'}`}
+                >
+                  Godišnje
+                </button>
+              </div>
+              <button onClick={handleUpgrade} className="bg-[#1a7a5e] text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-[#155f49] transition-all whitespace-nowrap">
+                Aktiviraj PRO →
+              </button>
+            </div>
+          )}
         </div>
 
         {/* ── STAT KARTICE ── */}
@@ -540,36 +596,50 @@ export default function DashboardPage() {
                 )}
               </div>
 
-              {/* Automatski zadaci iz Kaizen prijedloga */}
-              {kaizenOpenTasks.length > 0 && (
-                <div className="mb-5">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-[10px] font-bold text-[#9a9a9a] uppercase tracking-wider">💡 Iz Kaizen prijedloga</p>
-                    <span className="text-[10px] font-bold text-[#9a9a9a] bg-[#fafaf8] px-1.5 py-0.5 rounded-full">{kaizenOpenTasks.length}</span>
-                  </div>
-                  <div className="space-y-1.5 max-h-[220px] overflow-y-auto mb-1">
-                    {kaizenOpenTasks.slice(0, 8).map(kt => (
-                      <a
-                        key={kt.id}
-                        href="/alati/kaizen-prijedlog/pracenje"
-                        className="flex items-start gap-2.5 group px-1 py-1.5 rounded-lg hover:bg-[#fafaf8] transition-all"
-                      >
-                        <div className="w-5 h-5 shrink-0 rounded-full bg-[#fff7ed] text-[#ca8a04] flex items-center justify-center mt-0.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#ca8a04]" />
-                        </div>
-                        <span className="flex-1 text-sm text-[#1a1a1a] line-clamp-2">{kt.prob_opis || kt.kategorija || 'Kaizen prijedlog'}</span>
-                        <ArrowUpRight size={14} className="text-[#c0c0c0] group-hover:text-[#1a7a5e] shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-all" />
-                      </a>
-                    ))}
-                  </div>
-                  <a href="/alati/kaizen-prijedlog/pracenje" className="text-[11px] text-[#1a7a5e] font-semibold hover:underline">Otvori sustav praćenja →</a>
-                </div>
-              )}
+              <div className="grid grid-cols-2 rounded-xl bg-[#fafaf8] p-1 mb-4">
+                <button
+                  type="button"
+                  onClick={() => setTodoTab('kaizen')}
+                  className={`flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition-all ${todoTab === 'kaizen' ? 'bg-white shadow-sm text-[#1a7a5e]' : 'text-[#5a5a5a]'}`}
+                >
+                  💡 Iz Kaizena
+                  {kaizenOpenTasks.length > 0 && <span className="min-w-[18px] rounded-full bg-[#ca8a04] px-1.5 py-0.5 text-[9px] font-black leading-none text-white">{kaizenOpenTasks.length}</span>}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTodoTab('moji')}
+                  className={`flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition-all ${todoTab === 'moji' ? 'bg-white shadow-sm text-[#1a7a5e]' : 'text-[#5a5a5a]'}`}
+                >
+                  ✏️ Moji zadaci
+                  {aktivniTodos.length > 0 && <span className="min-w-[18px] rounded-full bg-[#1a7a5e] px-1.5 py-0.5 text-[9px] font-black leading-none text-white">{aktivniTodos.length}</span>}
+                </button>
+              </div>
 
-              {kaizenOpenTasks.length > 0 && <div className="border-t border-[#f0f0f0] mb-4" />}
-
-              <p className="text-[10px] font-bold text-[#9a9a9a] uppercase tracking-wider mb-2">✏️ Ručno dodano</p>
-
+              {todoTab === 'kaizen' ? (
+                kaizenOpenTasks.length === 0 ? (
+                  <p className="text-xs text-[#9a9a9a] text-center py-6">Nema otvorenih Kaizen prijedloga. 🎉</p>
+                ) : (
+                  <>
+                    <div className="space-y-1.5 max-h-[320px] overflow-y-auto mb-2">
+                      {kaizenOpenTasks.slice(0, 12).map(kt => (
+                        <a
+                          key={kt.id}
+                          href="/alati/kaizen-prijedlog/pracenje"
+                          className="flex items-start gap-2.5 group px-1 py-1.5 rounded-lg hover:bg-[#fafaf8] transition-all"
+                        >
+                          <div className="w-5 h-5 shrink-0 rounded-full bg-[#fff7ed] text-[#ca8a04] flex items-center justify-center mt-0.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#ca8a04]" />
+                          </div>
+                          <span className="flex-1 text-sm text-[#1a1a1a] line-clamp-2">{kt.prob_opis || kt.kategorija || 'Kaizen prijedlog'}</span>
+                          <ArrowUpRight size={14} className="text-[#c0c0c0] group-hover:text-[#1a7a5e] shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-all" />
+                        </a>
+                      ))}
+                    </div>
+                    <a href="/alati/kaizen-prijedlog/pracenje" className="text-[11px] text-[#1a7a5e] font-semibold hover:underline">Otvori sustav praćenja →</a>
+                  </>
+                )
+              ) : (
+              <>
               <form onSubmit={e => { e.preventDefault(); addTodo(); }} className="mb-4">
                 <div className="flex gap-2 mb-2">
                   <input
@@ -653,53 +723,7 @@ export default function DashboardPage() {
                   ))}
                 </div>
               )}
-            </div>
-
-            <div className="bg-white border border-[#e2e2e2] rounded-2xl p-6">
-              <h3 className="text-xs font-bold text-[#9a9a9a] uppercase tracking-wider mb-4">Vaš status</h3>
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-[#fafaf8] border border-[#e2e2e2] rounded-full flex items-center justify-center text-[#1a7a5e]">
-                  <User size={20}/>
-                </div>
-                <div>
-                  <div className="text-sm font-bold text-[#1a1a1a]">{user?.email}</div>
-                  {isPro ? (
-                    <div className="text-[11px] text-[#1a7a5e] font-bold">PRO PLAN ✨</div>
-                  ) : (
-                    <div className="text-[11px] text-[#9a9a9a] font-bold">
-                      PROBNI PERIOD{trialDaysLeft !== null && ` · JOŠ ${trialDaysLeft} ${trialDaysLeft === 1 ? 'DAN' : 'DANA'}`}
-                    </div>
-                  )}
-                </div>
-              </div>
-              {isPro ? (
-                <div className="bg-[#e8f5f0] text-[#1a7a5e] text-xs font-semibold px-4 py-3 rounded-xl text-center">✅ PRO plan aktivan</div>
-              ) : (
-                <div className="space-y-3">
-                  <p className="text-xs text-[#5a5a5a] leading-relaxed">
-                    {trialDaysLeft !== null
-                      ? <>Preostalo vam je <strong>{trialDaysLeft} {trialDaysLeft === 1 ? 'dan' : 'dana'}</strong> probnog perioda. Otkažite kad god želite.</>
-                      : <>Isprobajte sve PRO funkcije <strong>besplatno 14 dana</strong>. Otkažite kad god želite.</>
-                    }
-                  </p>
-                  <div className="flex gap-1 p-1 bg-[#fafaf8] border border-[#e2e2e2] rounded-lg">
-                    <button
-                      onClick={() => setSelectedPlan('monthly')}
-                      className={`flex-1 py-1.5 text-[11px] font-semibold rounded-md transition-all ${selectedPlan === 'monthly' ? 'bg-white shadow text-[#1a7a5e]' : 'text-[#5a5a5a]'}`}
-                    >
-                      Mjesečno
-                    </button>
-                    <button
-                      onClick={() => setSelectedPlan('annual')}
-                      className={`flex-1 py-1.5 text-[11px] font-semibold rounded-md transition-all ${selectedPlan === 'annual' ? 'bg-white shadow text-[#1a7a5e]' : 'text-[#5a5a5a]'}`}
-                    >
-                      Godišnje
-                    </button>
-                  </div>
-                  <button onClick={handleUpgrade} className="w-full py-2.5 bg-[#1a7a5e] text-white text-sm font-bold rounded-xl hover:bg-[#155f49] transition-all">
-                    Aktiviraj PRO — 14 dana besplatno →
-                  </button>
-                </div>
+              </>
               )}
             </div>
           </div>
