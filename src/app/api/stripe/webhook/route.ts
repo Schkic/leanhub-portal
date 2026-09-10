@@ -21,24 +21,36 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Webhook error' }, { status: 400 })
   }
 
+  // Pretplata se od Faze 0 vodi na organizaciji, ne na pojedinom profilu.
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session
-    const userId = session.metadata?.user_id
+    const plan = session.metadata?.plan === 'annual' ? 'annual' : 'monthly'
 
-    if (userId) {
-      const plan = session.metadata?.plan === 'annual' ? 'annual' : 'monthly'
-      await supabase.from('profiles').update({
+    // org_id dolazi iz metapodataka checkouta; ako fali (stariji linkovi),
+    // razriješi ga preko user_id -> članstvo.
+    let orgId = session.metadata?.org_id || null
+    if (!orgId && session.metadata?.user_id) {
+      const { data: m } = await supabase
+        .from('memberships')
+        .select('org_id')
+        .eq('user_id', session.metadata.user_id)
+        .maybeSingle()
+      orgId = m?.org_id ?? null
+    }
+
+    if (orgId) {
+      await supabase.from('organizations').update({
         is_pro: true,
         stripe_customer_id: session.customer as string,
         stripe_subscription_id: session.subscription as string,
         plan_interval: plan,
-      }).eq('id', userId)
+      }).eq('id', orgId)
     }
   }
 
   if (event.type === 'customer.subscription.deleted') {
     const subscription = event.data.object as Stripe.Subscription
-    await supabase.from('profiles').update({
+    await supabase.from('organizations').update({
       is_pro: false,
       stripe_subscription_id: null,
       plan_interval: null,

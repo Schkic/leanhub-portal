@@ -20,15 +20,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Niste prijavljeni' }, { status: 401 })
   }
 
-  // Uzmi customer_id iz korisnikovog vlastitog profila (RLS), ne iz tijela zahtjeva,
-  // tako da netko ne može otvoriti Stripe portal tuđe pretplate slanjem tuđeg customer_id.
-  const { data: profile } = await supabaseAuth
-    .from('profiles')
-    .select('stripe_customer_id')
-    .eq('id', user.id)
-    .single()
+  // Uzmi customer_id iz organizacije trenutnog korisnika (RLS), ne iz tijela
+  // zahtjeva, tako da netko ne može otvoriti Stripe portal tuđe pretplate.
+  const { data: mem } = await supabaseAuth
+    .from('memberships')
+    .select('organizations(stripe_customer_id)')
+    .eq('user_id', user.id)
+    .maybeSingle()
 
-  if (!profile?.stripe_customer_id) {
+  const stripeCustomerId = (mem?.organizations as any)?.stripe_customer_id as string | undefined
+
+  if (!stripeCustomerId) {
     return NextResponse.json({ error: 'Nema aktivne pretplate' }, { status: 400 })
   }
 
@@ -36,7 +38,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const session = await stripe.billingPortal.sessions.create({
-      customer: profile.stripe_customer_id,
+      customer: stripeCustomerId,
       return_url: `${process.env.NEXT_PUBLIC_APP_URL}/profil`,
     })
 

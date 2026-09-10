@@ -12,12 +12,21 @@ export async function POST(req: NextRequest) {
 
   const supabaseAuth = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { global: { headers: { Authorization: `Bearer ${token}` } } }
   )
   const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token)
   if (authError || !user) {
     return NextResponse.json({ error: 'Niste prijavljeni' }, { status: 401 })
   }
+
+  // Pretplatu plaća organizacija — proslijedi org_id kroz metapodatke da ga
+  // webhook zna povezati.
+  const { data: mem } = await supabaseAuth
+    .from('memberships')
+    .select('org_id')
+    .eq('user_id', user.id)
+    .maybeSingle()
 
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
   const { plan } = await req.json()
@@ -41,7 +50,11 @@ export async function POST(req: NextRequest) {
           quantity: 1,
         },
       ],
-      metadata: { user_id: user.id, plan: plan === 'annual' ? 'annual' : 'monthly' },
+      metadata: {
+        user_id: user.id,
+        org_id: mem?.org_id ?? '',
+        plan: plan === 'annual' ? 'annual' : 'monthly',
+      },
       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?success=true`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?canceled=true`,
     })

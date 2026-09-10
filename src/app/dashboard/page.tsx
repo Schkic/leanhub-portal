@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { supabase, requireAuth } from '@/lib/supabase';
+import { supabase, requireAuth, getCurrentOrg, type CurrentOrg } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { User, Plus, Trash2, Check, EyeOff, Settings2, Loader2, X, ArrowUpRight, Pencil } from 'lucide-react';
 import {
@@ -49,6 +49,7 @@ const getOEEColor = (oee: number) => {
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
+  const [org, setOrg] = useState<CurrentOrg | null>(null);
   const [recentAudits, setRecentAudits] = useState<any[]>([]);
   const [recentGemba, setRecentGemba] = useState<any[]>([]);
   const [recentA3, setRecentA3] = useState<any[]>([]);
@@ -90,6 +91,7 @@ export default function DashboardPage() {
         .from('profiles').select('*').eq('id', user.id).single();
       setProfile(profileData);
       setHiddenAlati(profileData?.dashboard_hidden_alati || []);
+      setOrg(await getCurrentOrg());
 
       const [a, g, a3, z, o, k, v, ish, smed, oeeAll, auditAll, kaizenAll, todosRes] = await Promise.all([
         supabase.from('audits_5s').select('id, created_at, firma, lokacija, total_score, datum', { count: 'exact' }).order('created_at', { ascending: false }).limit(2),
@@ -239,9 +241,9 @@ export default function DashboardPage() {
     </div>
   );
 
-  const isPro = profile?.is_pro;
-  const trialDaysLeft = profile?.trial_ends_at
-    ? Math.max(0, Math.ceil((new Date(profile.trial_ends_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+  const isPro = !!org?.is_pro;
+  const trialDaysLeft = org?.trial_ends_at
+    ? Math.max(0, Math.ceil((new Date(org.trial_ends_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : null;
   const latestOEE = oeeHistory.length > 0 ? oeeHistory[oeeHistory.length - 1].OEE : null;
   const latestAudit = auditHistory.length > 0 ? auditHistory[auditHistory.length - 1].rezultat : null;

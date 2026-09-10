@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, getCurrentOrg, type CurrentOrg } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { User, LogOut, CreditCard, Shield } from 'lucide-react';
 
@@ -11,6 +11,7 @@ const ANNUAL_PRICE_LABEL = '€299,99';
 export default function ProfilPage() {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
+  const [org, setOrg] = useState<CurrentOrg | null>(null);
   const [loading, setLoading] = useState(true);
   const [canceling, setCanceling] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'annual'>('monthly');
@@ -24,6 +25,7 @@ export default function ProfilPage() {
       const { data: profileData } = await supabase
         .from('profiles').select('*').eq('id', user.id).single();
       setProfile(profileData);
+      setOrg(await getCurrentOrg());
       setLoading(false);
     };
     getData();
@@ -69,9 +71,9 @@ export default function ProfilPage() {
     </div>
   );
 
-  const isPro = profile?.is_pro;
-  const trialDaysLeft = profile?.trial_ends_at
-    ? Math.max(0, Math.ceil((new Date(profile.trial_ends_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+  const isPro = !!org?.is_pro;
+  const trialDaysLeft = org?.trial_ends_at
+    ? Math.max(0, Math.ceil((new Date(org.trial_ends_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : null;
 
   return (
@@ -118,7 +120,7 @@ export default function ProfilPage() {
               <div className="flex justify-between items-center py-2 border-b border-[#f0f0f0]">
                 <span className="text-sm text-[#5a5a5a]">Cijena</span>
                 <span className="text-sm font-semibold">
-                  {profile?.plan_interval === 'annual' ? `${ANNUAL_PRICE_LABEL} / godina` : '€29,99 / mjesec'}
+                  {org?.plan_interval === 'annual' ? `${ANNUAL_PRICE_LABEL} / godina` : '€29,99 / mjesec'}
                 </span>
               </div>
               <button onClick={handleManageSubscription} className="w-full py-3 bg-white border border-[#e2e2e2] text-[#1a1a1a] font-bold rounded-xl hover:bg-[#fafaf8] transition-all">
