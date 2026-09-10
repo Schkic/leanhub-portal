@@ -21,7 +21,10 @@ export default function LoginPage() {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      router.push('/dashboard');
+      const next = typeof window !== 'undefined'
+        ? new URLSearchParams(window.location.search).get('next')
+        : null;
+      router.push(next && next.startsWith('/') ? next : '/dashboard');
       router.refresh();
     } catch (err: any) {
       setError(err.message || 'Greška pri prijavi');

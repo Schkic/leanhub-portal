@@ -62,10 +62,10 @@ export async function requireAuth(router: any) {
 
   const org = await getCurrentOrg();
 
-  // Korisnik bez organizacije — ne bi se smjelo dogoditi (trigger je kreira na
-  // registraciji), ali ako se dogodi, tretiraj kao neprijavljenog.
+  // Korisnik bez organizacije — mora prvo proći onboarding (kreirati organizaciju
+  // ili prihvatiti pozivnicu).
   if (!org) {
-    router.push('/auth/wall');
+    router.push('/organizacija');
     return null;
   }
 

@@ -52,7 +52,17 @@ export default function RegisterPage() {
           <p className="text-[#5a5a5a] mb-8 leading-relaxed">
             Poslali smo vam poveznicu za potvrdu registracije na <strong>{email}</strong>. Kliknite na nju kako biste aktivirali svoj račun.
           </p>
-          <button onClick={() => router.push('/prijava')} className="text-[#1a7a5e] font-bold hover:underline">Povratak na prijavu</button>
+          <button
+            onClick={() => {
+              const next = typeof window !== 'undefined'
+                ? new URLSearchParams(window.location.search).get('next')
+                : null;
+              router.push(next && next.startsWith('/') ? `/prijava?next=${encodeURIComponent(next)}` : '/prijava');
+            }}
+            className="text-[#1a7a5e] font-bold hover:underline"
+          >
+            Povratak na prijavu
+          </button>
         </div>
       </div>
     );
