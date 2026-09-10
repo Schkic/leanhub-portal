@@ -5,6 +5,7 @@ import { supabase, requireAuth } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { Plus, Trash2, Save, Loader2, Printer, Download, RotateCcw } from 'lucide-react';
 import jsPDF from 'jspdf';
+import LokacijaOdjelPicker from '@/components/LokacijaOdjelPicker';
 
 interface Smjena {
   naziv: string;
@@ -124,6 +125,8 @@ export default function OEEPage() {
   const [pogon, setPogon] = useState('');
   const [period, setPeriod] = useState('');
   const [odgovornaOsoba, setOdgovornaOsoba] = useState('');
+  const [lokacijaId, setLokacijaId] = useState('');
+  const [odjelId, setOdjelId] = useState('');
   const [strojevi, setStrojevi] = useState<Stroj[]>([noviStroj()]);
 
   useEffect(() => {
@@ -168,6 +171,7 @@ export default function OEEPage() {
     const { error } = await supabase.from('oee_kalkulator').insert({
       user_id: user.id,
       pogon, period, odgovorna_osoba: odgovornaOsoba,
+      location_id: lokacijaId || null, department_id: odjelId || null,
       strojevi,
     });
     setSaving(false);
@@ -311,9 +315,14 @@ export default function OEEPage() {
           <div className="md:col-span-2 bg-white border border-[#e2e2e2] rounded-xl p-4">
             <h3 className="text-sm font-semibold mb-3">Opći podaci</h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div><label className={labelCls}>Pogon / Linija</label><input type="text" className={inputCls} placeholder="npr. Montažna linija A" value={pogon} onChange={e => setPogon(e.target.value)} /></div>
+              <div><label className={labelCls}>Pogon / Linija (slobodan tekst)</label><input type="text" className={inputCls} placeholder="npr. Montažna linija A" value={pogon} onChange={e => setPogon(e.target.value)} /></div>
               <div><label className={labelCls}>Period mjerenja</label><input type="text" className={inputCls} placeholder="npr. Svibanj 2026." value={period} onChange={e => setPeriod(e.target.value)} /></div>
               <div><label className={labelCls}>Odgovorna osoba</label><input type="text" className={inputCls} placeholder="Ime i prezime" value={odgovornaOsoba} onChange={e => setOdgovornaOsoba(e.target.value)} /></div>
+              <LokacijaOdjelPicker
+                locationId={lokacijaId}
+                departmentId={odjelId}
+                onChange={({ locationId, departmentId }) => { setLokacijaId(locationId); setOdjelId(departmentId); }}
+              />
             </div>
           </div>
 

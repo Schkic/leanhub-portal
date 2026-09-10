@@ -5,6 +5,7 @@ import { supabase, requireAuth } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { Plus, Trash2, Save, Loader2, Printer, Download, RotateCcw } from 'lucide-react';
 import jsPDF from 'jspdf';
+import LokacijaOdjelPicker from '@/components/LokacijaOdjelPicker';
 
 const GUBICI = ['Prekomjerna proizvodnja', 'Čekanje', 'Transport', 'Prekomjerna obrada', 'Zalihe (WIP)', 'Nepotrebno kretanje', 'Greške / škart', 'Neiskorišten talent', 'Sigurnost', 'Ostalo'];
 const PRIORITETI = [
@@ -57,6 +58,8 @@ export default function GembaWalkPage() {
   const [voditelj, setVoditelj] = useState('');
   const [sudionici, setSudionici] = useState('');
   const [lokacija, setLokacija] = useState('');
+  const [lokacijaId, setLokacijaId] = useState('');
+  const [odjelId, setOdjelId] = useState('');
   const [cilj, setCilj] = useState('');
   const [napomena, setNapomena] = useState('');
 
@@ -112,6 +115,7 @@ export default function GembaWalkPage() {
       user_id: user.id,
       datum, pocetak, kraj, voditelj, sudionici,
       lokacija, cilj, napomena,
+      location_id: lokacijaId || null, department_id: odjelId || null,
       checklist, ocjene,
       zapazanja, akcije,
       sum_poz: sumPoz, sum_prob: sumProb,
@@ -247,7 +251,15 @@ export default function GembaWalkPage() {
             <div className="grid-3" style={{ marginBottom: 12 }}>
               <div className="field"><label>Voditelj Gemba Walka</label><input type="text" placeholder="Ime i prezime" value={voditelj} onChange={e => setVoditelj(e.target.value)} /></div>
               <div className="field"><label>Sudionici</label><input type="text" placeholder="npr. Voditelj linije, Lean koordinator" value={sudionici} onChange={e => setSudionici(e.target.value)} /></div>
-              <div className="field"><label>Odjel / Pogon / Linija</label><input type="text" placeholder="npr. Montažna linija B" value={lokacija} onChange={e => setLokacija(e.target.value)} /></div>
+              <div className="field"><label>Odjel / Pogon / Linija (slobodan tekst)</label><input type="text" placeholder="npr. Montažna linija B" value={lokacija} onChange={e => setLokacija(e.target.value)} /></div>
+            </div>
+            <div className="grid-2" style={{ marginBottom: 12 }}>
+              <LokacijaOdjelPicker
+                variant="plain"
+                locationId={lokacijaId}
+                departmentId={odjelId}
+                onChange={({ locationId, departmentId }) => { setLokacijaId(locationId); setOdjelId(departmentId); }}
+              />
             </div>
             <div className="grid-2">
               <div className="field">

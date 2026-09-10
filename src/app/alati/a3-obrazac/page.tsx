@@ -5,6 +5,7 @@ import { supabase, requireAuth } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { Trash2, Save, Loader2, Printer, Download, RotateCcw } from 'lucide-react';
 import jsPDF from 'jspdf';
+import LokacijaOdjelPicker from '@/components/LokacijaOdjelPicker';
 
 const STATUSI = ['📋 Otvoreno', '🔄 U tijeku', '✅ Završeno', '⏸️ Na čekanju'];
 const PRIORITETI = [
@@ -33,6 +34,8 @@ export default function A3Page() {
   const [vlasnik, setVlasnik] = useState('');
   const [odjel, setOdjel] = useState('');
   const [tim, setTim] = useState('');
+  const [lokacijaId, setLokacijaId] = useState('');
+  const [odjelId, setOdjelId] = useState('');
 
   // Sekcije
   const [pozadina, setPozadina] = useState('');
@@ -98,6 +101,7 @@ export default function A3Page() {
       user_id: user.id,
       naslov, datum_otvaranja: datumOtvaranja, datum_ciljni: datumCiljni,
       broj_a3: brojA3, vlasnik, odjel, tim,
+      location_id: lokacijaId || null, department_id: odjelId || null,
       pozadina, sto, gdje, kada, koliko, vizual,
       simptom, zasto, korijen, ciljno,
       kpi_naziv: kpiNaziv, kpi_trenutno: kpiTrenutno, kpi_ciljano: kpiCiljano,
@@ -290,8 +294,14 @@ export default function A3Page() {
             </div>
             <div className="grid-3">
               <div className="field"><label>Vlasnik A3 (odgovorna osoba)</label><input type="text" placeholder="Ime i prezime" value={vlasnik} onChange={e => setVlasnik(e.target.value)} /></div>
-              <div className="field"><label>Odjel / Pogon / Linija</label><input type="text" placeholder="npr. Montaža, Linija 3" value={odjel} onChange={e => setOdjel(e.target.value)} /></div>
+              <div className="field"><label>Odjel / Pogon / Linija (slobodan tekst)</label><input type="text" placeholder="npr. Montaža, Linija 3" value={odjel} onChange={e => setOdjel(e.target.value)} /></div>
               <div className="field"><label>Tim / Sudionici</label><input type="text" placeholder="npr. Kvaliteta, Proizvodnja, Održavanje" value={tim} onChange={e => setTim(e.target.value)} /></div>
+              <LokacijaOdjelPicker
+                variant="plain"
+                locationId={lokacijaId}
+                departmentId={odjelId}
+                onChange={({ locationId, departmentId }) => { setLokacijaId(locationId); setOdjelId(departmentId); }}
+              />
             </div>
           </div>
         </div>

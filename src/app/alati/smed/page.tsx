@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase, requireAuth } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { Plus, Trash2, Save, Loader2, Printer, Download, RotateCcw } from 'lucide-react';
+import LokacijaOdjelPicker from '@/components/LokacijaOdjelPicker';
 import jsPDF from 'jspdf';
 
 interface Aktivnost {
@@ -38,6 +39,8 @@ export default function SMEDPage() {
   const [datum, setDatum] = useState('');
   const [tim, setTim] = useState('');
   const [odjel, setOdjel] = useState('');
+  const [lokacijaId, setLokacijaId] = useState('');
+  const [odjelId, setOdjelId] = useState('');
   const [aktivnosti, setAktivnosti] = useState<Aktivnost[]>([novaAktivnost()]);
   const [akcije, setAkcije] = useState<AkcijaRow[]>([{ akcija: '', odgovorna: '', rok: '', status: 'Otvoreno' }]);
   const [napomena, setNapomena] = useState('');
@@ -85,6 +88,7 @@ export default function SMEDPage() {
     const { error } = await supabase.from('smed').insert({
       user_id: user.id,
       stroj, proces, datum, tim, odjel,
+      location_id: lokacijaId || null, department_id: odjelId || null,
       aktivnosti, akcije, napomena,
     });
     setSaving(false);
@@ -246,6 +250,11 @@ export default function SMEDPage() {
               <div><label className={labelCls}>Datum</label><input type="date" className={inputCls} value={datum} onChange={e => setDatum(e.target.value)} /></div>
               <div><label className={labelCls}>Odjel</label><input type="text" className={inputCls} placeholder="npr. Prerada plastike" value={odjel} onChange={e => setOdjel(e.target.value)} /></div>
               <div className="col-span-2"><label className={labelCls}>Tim / Sudionici</label><input type="text" className={inputCls} placeholder="npr. Operater, Voditelj smjene, Lean koordinator" value={tim} onChange={e => setTim(e.target.value)} /></div>
+              <LokacijaOdjelPicker
+                locationId={lokacijaId}
+                departmentId={odjelId}
+                onChange={({ locationId, departmentId }) => { setLokacijaId(locationId); setOdjelId(departmentId); }}
+              />
             </div>
           </div>
 

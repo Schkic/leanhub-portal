@@ -5,6 +5,7 @@ import { supabase, requireAuth } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { Plus, Trash2, Save, Loader2, Printer, Download } from 'lucide-react';
 import jsPDF from 'jspdf';
+import LokacijaOdjelPicker from '@/components/LokacijaOdjelPicker';
 
 const KATEGORIJE = [
   'Kvaliteta — škart / rework',
@@ -42,6 +43,8 @@ export default function PetZastoPage() {
   const [voditelj, setVoditelj] = useState('');
   const [tim, setTim] = useState('');
   const [odjel, setOdjel] = useState('');
+  const [lokacijaId, setLokacijaId] = useState('');
+  const [odjelId, setOdjelId] = useState('');
   const [broj, setBroj] = useState('');
   const [kategorija, setKategorija] = useState('');
   const [analize, setAnalize] = useState<Analiza[]>([novaAnaliza()]);
@@ -84,6 +87,7 @@ export default function PetZastoPage() {
     const { error } = await supabase.from('pet_zasto').insert({
       user_id: user.id,
       datum, voditelj, tim, odjel, broj, kategorija,
+      location_id: lokacijaId || null, department_id: odjelId || null,
       analize, akcije,
       sum_uzroci: sumUzroci,
       sum_ocekivano: sumOcekivano,
@@ -262,7 +266,13 @@ export default function PetZastoPage() {
             <div className="field"><label>Datum analize</label><input type="date" value={datum} onChange={e => setDatum(e.target.value)} /></div>
             <div className="field"><label>Voditelj analize</label><input type="text" placeholder="Ime i prezime" value={voditelj} onChange={e => setVoditelj(e.target.value)} /></div>
             <div className="field"><label>Tim / Sudionici</label><input type="text" placeholder="npr. Voditelj kvalitete, Lean koordinator" value={tim} onChange={e => setTim(e.target.value)} /></div>
-            <div className="field"><label>Odjel / Linija / Proces</label><input type="text" placeholder="npr. Montažna linija A" value={odjel} onChange={e => setOdjel(e.target.value)} /></div>
+            <div className="field"><label>Odjel / Linija / Proces (slobodan tekst)</label><input type="text" placeholder="npr. Montažna linija A" value={odjel} onChange={e => setOdjel(e.target.value)} /></div>
+            <LokacijaOdjelPicker
+              variant="plain"
+              locationId={lokacijaId}
+              departmentId={odjelId}
+              onChange={({ locationId, departmentId }) => { setLokacijaId(locationId); setOdjelId(departmentId); }}
+            />
             <div className="field"><label>Broj izvještaja / Reference</label><input type="text" placeholder="npr. NC-2024-042" value={broj} onChange={e => setBroj(e.target.value)} /></div>
             <div className="field">
               <label>Kategorija problema</label>

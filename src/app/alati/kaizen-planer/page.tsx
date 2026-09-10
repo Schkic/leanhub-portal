@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase, requireAuth } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { Plus, Trash2, Save, Loader2, Printer, Download, RotateCcw } from 'lucide-react';
+import LokacijaOdjelPicker from '@/components/LokacijaOdjelPicker';
 import jsPDF from 'jspdf';
 
 const ULOGE = ['Voditelj tima', 'Operater', 'Inženjer', 'Voditelj smjene', 'Menadžer', 'Lean koordinator', 'Kvaliteta', 'Održavanje', 'Vanjski stručnjak'];
@@ -61,6 +62,8 @@ export default function KaizenPlanerPage() {
   const [voditelj, setVoditelj] = useState('');
   const [sponzor, setSponzor] = useState('');
   const [opis, setOpis] = useState('');
+  const [lokacijaId, setLokacijaId] = useState('');
+  const [odjelId, setOdjelId] = useState('');
 
   const [tim, setTim] = useState<TeamMember[]>([]);
   const [kpi, setKpi] = useState<KPIRow[]>([]);
@@ -141,6 +144,7 @@ export default function KaizenPlanerPage() {
       user_id: user.id,
       naziv, proces, datum_od: datumOd || null, datum_do: datumDo || null,
       trajanje: parseInt(trajanje) || null, voditelj, sponzor, opis,
+      location_id: lokacijaId || null, department_id: odjelId || null,
       tim, kpi, ba_prije: baPrije, ba_poslije: baPoslije,
       agenda, akcije,
       zakljucak_good: zakljucakGood, zakljucak_improve: zakljucakImprove, zakljucak_general: zakljucakGeneral,
@@ -361,6 +365,14 @@ export default function KaizenPlanerPage() {
             <div className="grid-2" style={{ marginBottom: 12 }}>
               <div className="field"><label>Voditelj Kaizen eventa</label><input type="text" placeholder="Ime i prezime" value={voditelj} onChange={e => setVoditelj(e.target.value)} /></div>
               <div className="field"><label>Sponzor / odobrenje menadžmenta</label><input type="text" placeholder="Ime direktora / voditelja pogona" value={sponzor} onChange={e => setSponzor(e.target.value)} /></div>
+            </div>
+            <div className="grid-2" style={{ marginBottom: 12 }}>
+              <LokacijaOdjelPicker
+                variant="plain"
+                locationId={lokacijaId}
+                departmentId={odjelId}
+                onChange={({ locationId, departmentId }) => { setLokacijaId(locationId); setOdjelId(departmentId); }}
+              />
             </div>
             <div className="field">
               <label>Opis problema / razlog pokretanja Kaizena</label>

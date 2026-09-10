@@ -5,6 +5,7 @@ import { supabase, requireAuth } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { Plus, Trash2, Save, Loader2, Printer, Download, RotateCcw } from 'lucide-react';
 import jsPDF from 'jspdf';
+import LokacijaOdjelPicker from '@/components/LokacijaOdjelPicker';
 
 const KATEGORIJE_DEFAULT = [
   { id: 'covjek',    label: 'Čovjek',   emoji: '👷', color: '#1a7a5e', bg: '#e8f5f0' },
@@ -33,6 +34,8 @@ export default function IshikawaPage() {
   const [datum, setDatum] = useState('');
   const [tim, setTim] = useState('');
   const [odjel, setOdjel] = useState('');
+  const [lokacijaId, setLokacijaId] = useState('');
+  const [odjelId, setOdjelId] = useState('');
   const [kategorije, setKategorije] = useState<Record<string, string[]>>(defaultKategorije());
   const [korijenski, setKorijenski] = useState('');
   const [napomena, setNapomena] = useState('');
@@ -70,6 +73,7 @@ export default function IshikawaPage() {
     const { error } = await supabase.from('ishikawa').insert({
       user_id: user.id,
       problem, datum, tim, odjel,
+      location_id: lokacijaId || null, department_id: odjelId || null,
       kategorije, korijenski_uzrok: korijenski, napomena,
     });
     setSaving(false);
@@ -215,7 +219,12 @@ export default function IshikawaPage() {
             </div>
             <div><label className={labelCls}>Datum analize</label><input type="date" className={inputCls} value={datum} onChange={e => setDatum(e.target.value)} /></div>
             <div><label className={labelCls}>Tim / Sudionici</label><input type="text" className={inputCls} placeholder="npr. Voditelj kvalitete, Lean koordinator" value={tim} onChange={e => setTim(e.target.value)} /></div>
-            <div className="md:col-span-2"><label className={labelCls}>Odjel / Pogon</label><input type="text" className={inputCls} placeholder="npr. Montažna linija A" value={odjel} onChange={e => setOdjel(e.target.value)} /></div>
+            <div className="md:col-span-2"><label className={labelCls}>Odjel / Pogon (slobodan tekst)</label><input type="text" className={inputCls} placeholder="npr. Montažna linija A" value={odjel} onChange={e => setOdjel(e.target.value)} /></div>
+            <LokacijaOdjelPicker
+              locationId={lokacijaId}
+              departmentId={odjelId}
+              onChange={({ locationId, departmentId }) => { setLokacijaId(locationId); setOdjelId(departmentId); }}
+            />
           </div>
         </div>
 

@@ -356,7 +356,9 @@ export default function DashboardPage() {
             <h1 className="font-serif text-4xl text-[#1a1a1a] mb-1">
               Dobrodošli, {user?.user_metadata?.full_name || 'Korisniče'}
             </h1>
-            <p className="text-[#5a5a5a]">Vaš Lean upravljački centar</p>
+            <p className="text-[#5a5a5a]">
+              {org?.naziv ? <>Vaš Lean upravljački centar · <a href="/organizacija" className="font-semibold text-[#1a7a5e] hover:underline">{org.naziv}</a></> : 'Vaš Lean upravljački centar'}
+            </p>
           </div>
           <span className="rounded-lg border border-[#e2e2e2] bg-white px-3 py-1.5 text-xs font-bold text-[#5a5a5a] shadow-sm">
             Danas: {new Date().toLocaleDateString('hr-HR', { weekday: 'long', day: 'numeric', month: 'long' })}

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase, requireAuth } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { Save, Loader2, Trash2, Plus, X, ChevronDown, ChevronUp, HelpCircle, BookOpen, Image as ImageIcon } from 'lucide-react';
+import LokacijaOdjelPicker from '@/components/LokacijaOdjelPicker';
 
 type ElementType = 'supplier' | 'customer' | 'process' | 'inventory' | 'transport' |
   'supermarket' | 'kaizen' | 'control' | 'fifo' | 'operator' |
@@ -244,6 +245,9 @@ export default function VSMPage() {
   const [showHelp, setShowHelp] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ Proces: true, Materijal: true, Kanban: false, Ostalo: false });
   const [showTakt, setShowTakt] = useState(false);
+  const [showOrg, setShowOrg] = useState(false);
+  const [lokacijaId, setLokacijaId] = useState('');
+  const [odjelId, setOdjelId] = useState('');
   const [raspVrijeme, setRaspVrijeme] = useState('27600');
   const [potraznja, setPotraznja] = useState('500');
   const svgRef = useRef<SVGSVGElement>(null);
@@ -332,7 +336,10 @@ export default function VSMPage() {
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
-    const { error } = await supabase.from('vsm_dijagram').insert({ user_id: user.id, naziv, elementi: elements, konekcije });
+    const { error } = await supabase.from('vsm_dijagram').insert({
+      user_id: user.id, naziv, elementi: elements, konekcije,
+      location_id: lokacijaId || null, department_id: odjelId || null,
+    });
     setSaving(false);
     if (!error) setSaved(true);
   };
@@ -447,6 +454,22 @@ export default function VSMPage() {
                 )}
               </div>
             ))}
+
+            <div className="border-t border-[#e2e2e2] pt-2">
+              <button onClick={() => setShowOrg(!showOrg)}
+                className="w-full flex items-center justify-between px-2 py-1.5 text-[10px] font-bold text-[#9a9a9a] uppercase tracking-wider hover:text-[#1a1a1a]">
+                🏢 Organizacija {showOrg ? <ChevronUp size={10}/> : <ChevronDown size={10}/>}
+              </button>
+              {showOrg && (
+                <div className="px-2 py-2 space-y-2">
+                  <LokacijaOdjelPicker
+                    locationId={lokacijaId}
+                    departmentId={odjelId}
+                    onChange={({ locationId, departmentId }) => { setLokacijaId(locationId); setOdjelId(departmentId); }}
+                  />
+                </div>
+              )}
+            </div>
 
             <div className="border-t border-[#e2e2e2] pt-2">
               <button onClick={() => setShowTakt(!showTakt)}

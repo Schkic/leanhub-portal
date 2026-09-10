@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Save, Info, Loader2, CheckCircle2, FileDown } from 'lucide-react';
 import jsPDF from 'jspdf';
+import LokacijaOdjelPicker from '@/components/LokacijaOdjelPicker';
 import { supabase, requireAuth } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 
@@ -79,6 +80,8 @@ export default function Smart5SAudit() {
   const router = useRouter();
 
   const [meta, setMeta] = useState({ firma: '', osoba: '', datum: new Date().toISOString().split('T')[0], lokacija: '', smjena: '', broj: '' });
+  const [lokacijaId, setLokacijaId] = useState('');
+  const [odjelId, setOdjelId] = useState('');
   const [obs, setObs] = useState({ pozitivno: '', poboljsanje: '', akcije: '', sljedeci: '', potpis: '' });
 
   useEffect(() => {
@@ -106,6 +109,7 @@ export default function Smart5SAudit() {
       const { error } = await supabase.from('audits_5s').insert([{
         user_id: user.id, firma: meta.firma, osoba: meta.osoba, datum: meta.datum,
         lokacija: meta.lokacija, smjena: meta.smjena, broj: meta.broj,
+        location_id: lokacijaId || null, department_id: odjelId || null,
         scores, comments, total_score: totalScore, observations: obs
       }]);
       if (error) throw error;
@@ -402,7 +406,13 @@ export default function Smart5SAudit() {
             <div className="field"><label>Naziv firme / pogona</label><input type="text" value={meta.firma} onChange={e => setMeta({...meta, firma: e.target.value})} placeholder="npr. OptiCora d.o.o. — Pogon 1" /></div>
             <div className="field"><label>Odgovorna osoba</label><input type="text" value={meta.osoba} onChange={e => setMeta({...meta, osoba: e.target.value})} placeholder="Ime i prezime auditora" /></div>
             <div className="field"><label>Datum audita</label><input type="date" value={meta.datum} onChange={e => setMeta({...meta, datum: e.target.value})} /></div>
-            <div className="field"><label>Lokacija / radno mjesto</label><input type="text" value={meta.lokacija} onChange={e => setMeta({...meta, lokacija: e.target.value})} placeholder="npr. Montažna linija A" /></div>
+            <div className="field"><label>Lokacija / radno mjesto (slobodan tekst)</label><input type="text" value={meta.lokacija} onChange={e => setMeta({...meta, lokacija: e.target.value})} placeholder="npr. Montažna linija A" /></div>
+            <LokacijaOdjelPicker
+              variant="plain"
+              locationId={lokacijaId}
+              departmentId={odjelId}
+              onChange={({ locationId, departmentId }) => { setLokacijaId(locationId); setOdjelId(departmentId); }}
+            />
             <div className="field"><label>Smjena</label>
               <select value={meta.smjena} onChange={e => setMeta({...meta, smjena: e.target.value})}>
                 <option value="">— odaberi —</option>

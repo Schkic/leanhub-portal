@@ -5,6 +5,7 @@ import { supabase, requireAuth } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { Save, Loader2, Printer, Download, RotateCcw } from 'lucide-react';
 import jsPDF from 'jspdf';
+import LokacijaOdjelPicker from '@/components/LokacijaOdjelPicker';
 
 const KATEGORIJE = [
   { value: 'Sigurnost', emoji: '🦺', color: 'border-red-300 bg-red-50 text-red-700', desc: 'Smanjuje rizik ozljeda' },
@@ -46,6 +47,8 @@ export default function KaizenPrijedlogPage() {
   const [datum, setDatum] = useState('');
   const [odjel, setOdjel] = useState('');
   const [radnoMjesto, setRadnoMjesto] = useState('');
+  const [lokacijaId, setLokacijaId] = useState('');
+  const [odjelId, setOdjelId] = useState('');
   const [probGdje, setProbGdje] = useState('');
   const [probOpis, setProbOpis] = useState('');
   const [baPrije, setBaPrije] = useState('');
@@ -71,6 +74,7 @@ export default function KaizenPrijedlogPage() {
     const { error } = await supabase.from('kaizen_prijedlog').insert({
       user_id: user.id,
       ime, datum, odjel, radno_mjesto: radnoMjesto,
+      location_id: lokacijaId || null, department_id: odjelId || null,
       prob_gdje: probGdje, prob_opis: probOpis,
       ba_prije: baPrije, ba_poslije: baPoslije,
       rjes_opis: rjesOpis, rjes_potrebno: rjesPotrebno, rjes_trosak: rjesTrosak,
@@ -204,6 +208,11 @@ export default function KaizenPrijedlogPage() {
             <div><label className={labelCls}>Datum prijedloga</label><input type="date" className={inputCls} value={datum} onChange={e => setDatum(e.target.value)} /></div>
             <div><label className={labelCls}>Odjel / Pogon</label><input type="text" className={inputCls} placeholder="npr. Montaža, Skladište, Kvaliteta..." value={odjel} onChange={e => setOdjel(e.target.value)} /></div>
             <div><label className={labelCls}>Radno mjesto</label><input type="text" className={inputCls} placeholder="npr. Operater, Voditelj smjene, Inženjer..." value={radnoMjesto} onChange={e => setRadnoMjesto(e.target.value)} /></div>
+            <LokacijaOdjelPicker
+              locationId={lokacijaId}
+              departmentId={odjelId}
+              onChange={({ locationId, departmentId }) => { setLokacijaId(locationId); setOdjelId(departmentId); }}
+            />
           </div>
         </Section>
 
