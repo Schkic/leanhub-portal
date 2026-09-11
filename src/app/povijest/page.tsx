@@ -97,12 +97,6 @@ export default function HistoryPage() {
     </div>
   );
 
-  const Card = ({ children }: any) => (
-    <div className="bg-white border border-[#e2e2e2] rounded-xl p-4 hover:border-[#1a7a5e] hover:shadow-md transition-all">
-      <div className="flex items-center gap-4">{children}</div>
-    </div>
-  );
-
   return (
     <div className="bg-[#fafaf8] min-h-screen pb-20">
       <div className="bg-white border-b border-[#e2e2e2] px-6 py-8">
@@ -151,7 +145,7 @@ export default function HistoryPage() {
           <div className="space-y-4">
             {gembaWalks.length === 0 ? <EmptyState icon="🚶" title="Još nemate Gemba Walkova" href="/alati/gemba-walk" label="Novi Gemba Walk"/> :
               gembaWalks.map(g => (
-                <Card key={g.id}>
+                <a key={g.id} href={`/povijest/gemba/${g.id}`} className="bg-white border border-[#e2e2e2] rounded-xl p-4 hover:border-[#1a7a5e] hover:shadow-md transition-all flex items-center gap-4 group">
                   <div className="w-12 h-12 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xl shrink-0">🚶</div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
@@ -167,7 +161,8 @@ export default function HistoryPage() {
                       <span>🎯 {Array.isArray(g.akcije) ? g.akcije.length : 0} akcija</span>
                     </div>
                   </div>
-                </Card>
+                  <ChevronRight className="text-[#e2e2e2] group-hover:text-[#1a7a5e] shrink-0" size={20}/>
+                </a>
               ))}
           </div>
         )}
@@ -176,7 +171,7 @@ export default function HistoryPage() {
           <div className="space-y-4">
             {a3Obrasci.length === 0 ? <EmptyState icon="📄" title="Još nemate A3 obrazaca" href="/alati/a3-obrazac" label="Novi A3 Obrazac"/> :
               a3Obrasci.map(a => (
-                <Card key={a.id}>
+                <a key={a.id} href={`/povijest/a3/${a.id}`} className="bg-white border border-[#e2e2e2] rounded-xl p-4 hover:border-[#1a7a5e] hover:shadow-md transition-all flex items-center gap-4 group">
                   <div className="w-12 h-12 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center text-xl shrink-0">📄</div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
@@ -189,7 +184,8 @@ export default function HistoryPage() {
                     </div>
                     {a.cilj_postignut && <span className={`text-xs font-semibold px-2 py-0.5 rounded mt-1 inline-block ${getCiljColor(a.cilj_postignut)}`}>{a.cilj_postignut}</span>}
                   </div>
-                </Card>
+                  <ChevronRight className="text-[#e2e2e2] group-hover:text-[#1a7a5e] shrink-0" size={20}/>
+                </a>
               ))}
           </div>
         )}
@@ -198,7 +194,7 @@ export default function HistoryPage() {
           <div className="space-y-4">
             {zastoAnalize.length === 0 ? <EmptyState icon="❓" title="Još nemate 5x Zašto analiza" href="/alati/5-zasto" label="Nova analiza"/> :
               zastoAnalize.map(z => (
-                <Card key={z.id}>
+                <a key={z.id} href={`/povijest/zasto/${z.id}`} className="bg-white border border-[#e2e2e2] rounded-xl p-4 hover:border-[#1a7a5e] hover:shadow-md transition-all flex items-center gap-4 group">
                   <div className="w-12 h-12 rounded-lg bg-red-50 text-red-600 flex items-center justify-center text-xl shrink-0">❓</div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
@@ -211,7 +207,8 @@ export default function HistoryPage() {
                     </div>
                     <span className="text-xs text-[#9a9a9a]">🔍 {Array.isArray(z.analize) ? z.analize.length : 0} analiza</span>
                   </div>
-                </Card>
+                  <ChevronRight className="text-[#e2e2e2] group-hover:text-[#1a7a5e] shrink-0" size={20}/>
+                </a>
               ))}
           </div>
         )}
@@ -243,7 +240,7 @@ export default function HistoryPage() {
           <div className="space-y-4">
             {kaizenPrijedlozi.length === 0 ? <EmptyState icon="♾️" title="Još nemate Kaizen prijedloga" href="/alati/kaizen-prijedlog" label="Novi Kaizen Prijedlog"/> :
               kaizenPrijedlozi.map(k => (
-                <Card key={k.id}>
+                <a key={k.id} href={`/povijest/kaizen/${k.id}`} className="bg-white border border-[#e2e2e2] rounded-xl p-4 hover:border-[#1a7a5e] hover:shadow-md transition-all flex items-center gap-4 group">
                   <div className="w-12 h-12 rounded-lg bg-[#e8f5f0] text-[#1a7a5e] flex items-center justify-center text-xl shrink-0">♾️</div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
@@ -257,7 +254,8 @@ export default function HistoryPage() {
                     </div>
                     {k.status && <span className={`text-xs font-semibold px-2 py-0.5 rounded mt-1 inline-block ${getStatusColor(k.status)}`}>{k.status}</span>}
                   </div>
-                </Card>
+                  <ChevronRight className="text-[#e2e2e2] group-hover:text-[#1a7a5e] shrink-0" size={20}/>
+                </a>
               ))}
           </div>
         )}
@@ -266,7 +264,7 @@ export default function HistoryPage() {
           <div className="space-y-4">
             {vsmDijagrami.length === 0 ? <EmptyState icon="🗺️" title="Još nemate VSM dijagrama" href="/alati/vsm-builder" label="Novi VSM Dijagram"/> :
               vsmDijagrami.map(v => (
-                <Card key={v.id}>
+                <a key={v.id} href={`/povijest/vsm/${v.id}`} className="bg-white border border-[#e2e2e2] rounded-xl p-4 hover:border-[#1a7a5e] hover:shadow-md transition-all flex items-center gap-4 group">
                   <div className="w-12 h-12 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center text-xl shrink-0">🗺️</div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
@@ -279,7 +277,8 @@ export default function HistoryPage() {
                       <span>{new Date(v.created_at).toLocaleDateString('hr-HR')}</span>
                     </div>
                   </div>
-                </Card>
+                  <ChevronRight className="text-[#e2e2e2] group-hover:text-[#1a7a5e] shrink-0" size={20}/>
+                </a>
               ))}
           </div>
         )}
@@ -288,7 +287,7 @@ export default function HistoryPage() {
           <div className="space-y-4">
             {ishikawaDijagrami.length === 0 ? <EmptyState icon="🐟" title="Još nemate Ishikawa dijagrama" href="/alati/ishikawa" label="Novi Ishikawa dijagram"/> :
               ishikawaDijagrami.map(ish => (
-                <Card key={ish.id}>
+                <a key={ish.id} href={`/povijest/ishikawa/${ish.id}`} className="bg-white border border-[#e2e2e2] rounded-xl p-4 hover:border-[#1a7a5e] hover:shadow-md transition-all flex items-center gap-4 group">
                   <div className="w-12 h-12 rounded-lg bg-red-50 text-red-600 flex items-center justify-center text-xl shrink-0">🐟</div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
@@ -301,7 +300,8 @@ export default function HistoryPage() {
                     </div>
                     {ish.korijenski_uzrok && <p className="text-xs text-[#5a5a5a] mt-1 truncate">✅ {ish.korijenski_uzrok}</p>}
                   </div>
-                </Card>
+                  <ChevronRight className="text-[#e2e2e2] group-hover:text-[#1a7a5e] shrink-0" size={20}/>
+                </a>
               ))}
           </div>
         )}
@@ -310,7 +310,7 @@ export default function HistoryPage() {
           <div className="space-y-4">
             {smedAnalize.length === 0 ? <EmptyState icon="⚡" title="Još nemate SMED analiza" href="/alati/smed" label="Nova SMED analiza"/> :
               smedAnalize.map(s => (
-                <Card key={s.id}>
+                <a key={s.id} href={`/povijest/smed/${s.id}`} className="bg-white border border-[#e2e2e2] rounded-xl p-4 hover:border-[#1a7a5e] hover:shadow-md transition-all flex items-center gap-4 group">
                   <div className="w-12 h-12 rounded-lg bg-yellow-50 text-yellow-600 flex items-center justify-center text-xl shrink-0">⚡</div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
@@ -323,7 +323,8 @@ export default function HistoryPage() {
                     </div>
                     <span className="text-xs text-[#9a9a9a]">⚡ {Array.isArray(s.aktivnosti) ? s.aktivnosti.length : 0} aktivnosti</span>
                   </div>
-                </Card>
+                  <ChevronRight className="text-[#e2e2e2] group-hover:text-[#1a7a5e] shrink-0" size={20}/>
+                </a>
               ))}
           </div>
         )}
