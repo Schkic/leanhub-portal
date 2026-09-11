@@ -8,24 +8,7 @@ import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, ReferenceLine, PieChart, Pie, Cell, Legend
 } from 'recharts';
-
-// OEE kalkulacija
-const calcStrojAvg = (strojevi: any[]) => {
-  if (!Array.isArray(strojevi)) return 0;
-  const results = strojevi.map(stroj => {
-    if (!Array.isArray(stroj.smjene)) return 0;
-    const smjeneOEE = stroj.smjene.map((s: any) => {
-      const op = s.planirano - s.zastoji;
-      if (s.planirano <= 0 || op <= 0 || s.idealniTakt <= 0) return 0;
-      const A = Math.min((op / s.planirano) * 100, 100);
-      const P = Math.min(s.idealniTakt > 0 ? ((s.ukupnoKomada / (op / s.idealniTakt)) * 100) : 0, 100);
-      const Q = Math.min(s.ukupnoKomada > 0 ? ((s.dobriKomadi / s.ukupnoKomada) * 100) : 0, 100);
-      return (A / 100) * (P / 100) * (Q / 100) * 100;
-    }).filter((v: number) => v > 0);
-    return smjeneOEE.length > 0 ? smjeneOEE.reduce((a: number, b: number) => a + b, 0) / smjeneOEE.length : 0;
-  }).filter(v => v > 0);
-  return results.length > 0 ? +(results.reduce((a, b) => a + b, 0) / results.length).toFixed(1) : 0;
-};
+import { calcStrojAvg, getOEEColor } from '@/lib/oee';
 
 const TODO_BOJE = ['#1a7a5e', '#2563eb', '#dc2626', '#ca8a04', '#7c3aed', '#0891b2', '#ea580c', '#6b7280'];
 
@@ -37,13 +20,6 @@ const formatTodoDatum = (t: any) => {
     return `Uređeno ${fmt(updated)}`;
   }
   return `Kreirano ${fmt(created)}`;
-};
-
-const getOEEColor = (oee: number) => {
-  if (oee >= 85) return '#1a7a5e';
-  if (oee >= 75) return '#16a34a';
-  if (oee >= 60) return '#ca8a04';
-  return '#dc2626';
 };
 
 export default function DashboardPage() {
@@ -439,8 +415,11 @@ export default function DashboardPage() {
         {/* ── KPI GRAFOVI ── */}
         {(oeeHistory.length > 0 || auditHistory.length > 0 || kaizenStats.length > 0) && (
           <div className="mb-8">
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-bold text-[#9a9a9a] uppercase tracking-wider">📈 KPI Pregled</h2>
+              <a href="/dashboard/kpi" className="text-xs font-semibold text-[#1a7a5e] hover:underline flex items-center gap-1">
+                Izvještaj po lokaciji/odjelu <ArrowUpRight size={12} />
+              </a>
             </div>
             <div className="grid md:grid-cols-3 gap-4">
 
