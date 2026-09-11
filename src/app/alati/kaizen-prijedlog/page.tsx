@@ -66,6 +66,13 @@ export default function KaizenPrijedlogPage() {
       setUser(user);
     });
     setDatum(new Date().toISOString().split('T')[0]);
+
+    // Prefill iz drugog alata (npr. "Pretvori u Kaizen prijedlog" u 5×Zašto).
+    const params = new URLSearchParams(window.location.search);
+    const odjelParam = params.get('odjel');
+    const probOpisParam = params.get('probOpis');
+    if (odjelParam) setOdjel(odjelParam);
+    if (probOpisParam) setProbOpis(probOpisParam);
   }, [router]);
 
   const handleSave = async () => {

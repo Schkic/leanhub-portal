@@ -62,6 +62,17 @@ export default function PetZastoPage() {
       setUser(user);
     });
     setDatum(new Date().toISOString().split('T')[0]);
+
+    // Prefill iz drugog alata (npr. "🔍" gumb na zapažanju u Gemba Walku).
+    const params = new URLSearchParams(window.location.search);
+    const problem = params.get('problem');
+    const odjelParam = params.get('odjel');
+    if (problem) setAnalize(prev => {
+      const updated = [...prev];
+      updated[0] = { ...updated[0], problem };
+      return updated;
+    });
+    if (odjelParam) setOdjel(odjelParam);
   }, [router]);
 
   const addAnaliza = () => setAnalize([...analize, novaAnaliza()]);
@@ -339,6 +350,17 @@ export default function PetZastoPage() {
                 <strong>💡 Savjet:</strong>
                 Kada pronađete korijenski uzrok, zapitajte se: &quot;Da uklonimo ovaj uzrok, hoće li se problem ponoviti?&quot; Ako je odgovor NE — pronašli ste pravi korijenski uzrok.
               </div>
+
+              {a.korijen.trim() && (
+                <a
+                  href={`/alati/kaizen-prijedlog?odjel=${encodeURIComponent(odjel)}&probOpis=${encodeURIComponent(`${a.problem}\n\nKorijenski uzrok: ${a.korijen}`)}`}
+                  target="_blank" rel="noopener noreferrer"
+                  className="add-row-btn"
+                  style={{ marginTop: 10, display: 'inline-flex' }}
+                >
+                  💡 Pretvori u Kaizen prijedlog →
+                </a>
+              )}
             </div>
           </div>
         ))}

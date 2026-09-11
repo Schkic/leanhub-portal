@@ -190,6 +190,9 @@ body {
 .action-row input:focus, .action-row select:focus { outline: none; border-color: var(--green); }
 .del-btn { background: none; border: none; color: var(--text-faint); cursor: pointer; font-size: 16px; padding: 6px; border-radius: 4px; }
 .del-btn:hover { color: var(--red); background: #fee2e2; }
+.link-btn { background: none; border: none; color: var(--text-faint); cursor: pointer; font-size: 14px; padding: 6px; border-radius: 4px; text-decoration: none; display: inline-block; }
+.link-btn:hover { color: var(--green); background: var(--green-light); }
+.row-actions { display: flex; align-items: center; gap: 2px; }
 .action-header { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 8px; padding: 8px 0; border-bottom: 2px solid var(--border); }
 .action-header span { font-size: 11px; font-weight: 500; color: var(--text-faint); text-transform: uppercase; letter-spacing: .04em; }
 .add-action-btn { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--green); background: none; border: 1px dashed var(--green); border-radius: 6px; padding: 7px 14px; cursor: pointer; margin-top: 10px; font-family: inherit; transition: background .15s; }

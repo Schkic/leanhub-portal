@@ -82,7 +82,21 @@ export default function Smart5SAudit() {
   const [meta, setMeta] = useState({ firma: '', osoba: '', datum: new Date().toISOString().split('T')[0], lokacija: '', smjena: '', broj: '' });
   const [lokacijaId, setLokacijaId] = useState('');
   const [odjelId, setOdjelId] = useState('');
+  const [povijestLokacije, setPovijestLokacije] = useState<{ datum: string; total_score: number }[]>([]);
+  const [otvoreneAkcijeLok, setOtvoreneAkcijeLok] = useState<number | null>(null);
   const [obs, setObs] = useState({ pozitivno: '', poboljsanje: '', akcije: '', sljedeci: '', potpis: '' });
+
+  useEffect(() => {
+    if (!lokacijaId) { setPovijestLokacije([]); setOtvoreneAkcijeLok(null); return; }
+    (async () => {
+      const [{ data: prev }, { data: akc }] = await Promise.all([
+        supabase.from('audits_5s').select('datum, total_score').eq('location_id', lokacijaId).order('datum', { ascending: false }).limit(3),
+        supabase.from('actions').select('id').eq('location_id', lokacijaId).in('status', ['otvoreno', 'u_tijeku']),
+      ]);
+      setPovijestLokacije(prev || []);
+      setOtvoreneAkcijeLok((akc || []).length);
+    })();
+  }, [lokacijaId]);
 
   useEffect(() => {
     requireAuth(router).then(user => { if (!user) return; setUser(user); });
@@ -424,6 +438,31 @@ export default function Smart5SAudit() {
             </div>
             <div className="field"><label>Broj audita</label><input type="text" value={meta.broj} onChange={e => setMeta({...meta, broj: e.target.value})} placeholder="npr. 2024-001" /></div>
           </div>
+
+          {lokacijaId && (
+            <div style={{ marginTop: 14, padding: '10px 14px', background: '#f0f9f5', border: '1px solid #d3ede1', borderRadius: 10 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: '#1a7a5e', marginBottom: 6 }}>📈 Povijest ove lokacije</div>
+              {povijestLokacije.length > 0 ? (
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center', fontSize: 12, color: '#5a5a5a' }}>
+                  {povijestLokacije.map((p, i) => (
+                    <span key={i}>{new Date(p.datum).toLocaleDateString('hr-HR')}: <strong>{p.total_score}/100</strong></span>
+                  ))}
+                  {povijestLokacije.length > 1 && (
+                    <span style={{ fontWeight: 700, color: povijestLokacije[0].total_score >= povijestLokacije[povijestLokacije.length - 1].total_score ? '#1a7a5e' : '#dc2626' }}>
+                      {povijestLokacije[0].total_score >= povijestLokacije[povijestLokacije.length - 1].total_score ? '↑ poboljšanje' : '↓ pad'}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <span style={{ fontSize: 12, color: '#9a9a9a' }}>Ovo je prvi zabilježeni audit ove lokacije.</span>
+              )}
+              {!!otvoreneAkcijeLok && (
+                <div style={{ fontSize: 12, color: '#dc2626', marginTop: 4 }}>
+                  ⚠️ {otvoreneAkcijeLok} otvorenih akcija za ovu lokaciju — <a href="/akcije" style={{ textDecoration: 'underline' }}>pogledaj</a>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="legend">

@@ -316,7 +316,7 @@ export default function GembaWalkPage() {
                     <th style={{ width: '30%' }}>Opis zapažanja</th>
                     <th style={{ width: '22%' }}>Mogući uzrok</th>
                     <th style={{ width: '11%' }}>Prioritet</th>
-                    <th style={{ width: 22 }}></th>
+                    <th style={{ width: 52 }}></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -337,7 +337,19 @@ export default function GembaWalkPage() {
                           {PRIORITETI.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
                         </select>
                       </td>
-                      <td><button className="del-btn" onClick={() => removeZapazanje(i)}>✕</button></td>
+                      <td>
+                        <div className="row-actions">
+                          {z.opis.trim() && (
+                            <a
+                              className="link-btn"
+                              title="Pretvori u 5×Zašto analizu"
+                              target="_blank" rel="noopener noreferrer"
+                              href={`/alati/5-zasto?problem=${encodeURIComponent(z.opis)}&odjel=${encodeURIComponent(z.lokacija || lokacija)}`}
+                            >🔍</a>
+                          )}
+                          <button className="del-btn" onClick={() => removeZapazanje(i)}>✕</button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

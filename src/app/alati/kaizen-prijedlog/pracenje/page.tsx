@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase, requireAuth } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import { Loader2, Link2, Check } from 'lucide-react';
+import { Loader2, Link2, Check, ArrowRight } from 'lucide-react';
 
 const STATUSI = ['Otvoreno', 'U razmatranju', 'Odobreno', 'U provedbi', 'Završeno', 'Odbijeno'];
 const ZAVRSNI_STATUSI = ['Završeno', 'Odbijeno'];
@@ -25,9 +25,12 @@ interface Prijedlog {
   odjel: string | null;
   radno_mjesto: string | null;
   prob_opis: string | null;
+  rjes_opis: string | null;
   kategorija: string | null;
   prioritet: string | null;
   status: string;
+  location_id: string | null;
+  department_id: string | null;
 }
 
 export default function PracenjeKaizenPage() {
@@ -35,20 +38,37 @@ export default function PracenjeKaizenPage() {
   const [token, setToken] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [prijedlozi, setPrijedlozi] = useState<Prijedlog[]>([]);
+  const [akcijaZaId, setAkcijaZaId] = useState<Set<string>>(new Set());
+  const [creatingActionId, setCreatingActionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [dragId, setDragId] = useState<string | null>(null);
   const router = useRouter();
 
   const load = async (uid: string) => {
-    const [{ data: profil }, { data: rows }] = await Promise.all([
+    const [{ data: profil }, { data: rows }, { data: postojeceAkcije }] = await Promise.all([
       supabase.from('profiles').select('kaizen_share_token').eq('id', uid).single(),
       supabase.from('kaizen_prijedlog')
-        .select('id, created_at, closed_at, ime, odjel, radno_mjesto, prob_opis, kategorija, prioritet, status')
+        .select('id, created_at, closed_at, ime, odjel, radno_mjesto, prob_opis, rjes_opis, kategorija, prioritet, status, location_id, department_id')
         .order('created_at', { ascending: false }),
+      supabase.from('actions').select('izvor_id').eq('izvor_alat', 'kaizen_prijedlog'),
     ]);
     if (profil?.kaizen_share_token) setToken(profil.kaizen_share_token);
     setPrijedlozi(rows || []);
+    setAkcijaZaId(new Set((postojeceAkcije || []).map((a: any) => a.izvor_id).filter(Boolean)));
     setLoading(false);
+  };
+
+  const createAction = async (p: Prijedlog) => {
+    setCreatingActionId(p.id);
+    const { error } = await supabase.from('actions').insert({
+      naziv: p.rjes_opis?.trim() || p.prob_opis?.trim() || 'Kaizen prijedlog',
+      izvor_alat: 'kaizen_prijedlog',
+      izvor_id: p.id,
+      location_id: p.location_id,
+      department_id: p.department_id,
+    });
+    setCreatingActionId(null);
+    if (!error) setAkcijaZaId(prev => new Set(prev).add(p.id));
   };
 
   useEffect(() => {
@@ -213,6 +233,21 @@ export default function PracenjeKaizenPage() {
                             {p.kategorija && <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-[#e8f5f0] text-[#1a7a5e]">{p.kategorija}</span>}
                             {p.prioritet && <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-[#fef9c3] text-[#ca8a04]">{p.prioritet}</span>}
                           </div>
+                          {status !== 'Odbijeno' && (
+                            akcijaZaId.has(p.id) ? (
+                              <div className="flex items-center gap-1 text-[9px] font-semibold text-[#1a7a5e] mt-2">
+                                <Check size={11} /> Akcija kreirana
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => createAction(p)}
+                                disabled={creatingActionId === p.id}
+                                className="flex items-center gap-1 text-[9px] font-semibold text-[#5a5a5a] hover:text-[#1a7a5e] mt-2 disabled:opacity-50"
+                              >
+                                {creatingActionId === p.id ? <Loader2 size={11} className="animate-spin" /> : <ArrowRight size={11} />} Pretvori u akciju
+                              </button>
+                            )
+                          )}
                         </div>
                       ))}
                     </div>
