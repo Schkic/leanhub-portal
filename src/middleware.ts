@@ -5,7 +5,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 // ni /alati/vodici/* koji su javni vodiči). Isti popis kao ono što stranice već
 // same provjeravaju kroz requireAuth() — ovo samo dodaje server-side zaštitu
 // prije nego se stranica uopće isporuči.
-const PROTECTED_PREFIXES = ['/dashboard', '/povijest', '/profil', '/organizacija'];
+const PROTECTED_PREFIXES = ['/dashboard', '/povijest', '/profil', '/organizacija', '/akcije'];
 
 // Rute namijenjene neprijavljenima (landing, login, registracija) — ako je
 // korisnik već prijavljen, nema smisla da mu se prikazuju, pa ga šaljemo

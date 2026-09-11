@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Plus, Trash2, Save, Loader2, Printer, Download } from 'lucide-react';
 import jsPDF from 'jspdf';
 import LokacijaOdjelPicker from '@/components/LokacijaOdjelPicker';
+import { syncAkcijeToActions } from '@/lib/actions';
 
 const KATEGORIJE = [
   'Kvaliteta — škart / rework',
@@ -84,7 +85,7 @@ export default function PetZastoPage() {
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
-    const { error } = await supabase.from('pet_zasto').insert({
+    const { data, error } = await supabase.from('pet_zasto').insert({
       user_id: user.id,
       datum, voditelj, tim, odjel, broj, kategorija,
       location_id: lokacijaId || null, department_id: odjelId || null,
@@ -94,9 +95,12 @@ export default function PetZastoPage() {
       sum_provjera: sumProva || null,
       sum_rezultat: sumRezultat,
       sum_potpis: sumPotpis,
-    });
+    }).select('id').single();
     setSaving(false);
-    if (!error) setSaved(true);
+    if (!error) {
+      setSaved(true);
+      if (data) syncAkcijeToActions('pet_zasto', data.id, akcije, { locationId: lokacijaId, departmentId: odjelId });
+    }
   };
 
   const exportPDF = () => {

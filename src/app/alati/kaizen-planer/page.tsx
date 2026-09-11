@@ -5,6 +5,7 @@ import { supabase, requireAuth } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { Plus, Trash2, Save, Loader2, Printer, Download, RotateCcw } from 'lucide-react';
 import LokacijaOdjelPicker from '@/components/LokacijaOdjelPicker';
+import { syncAkcijeToActions } from '@/lib/actions';
 import jsPDF from 'jspdf';
 
 const ULOGE = ['Voditelj tima', 'Operater', 'Inženjer', 'Voditelj smjene', 'Menadžer', 'Lean koordinator', 'Kvaliteta', 'Održavanje', 'Vanjski stručnjak'];
@@ -140,7 +141,7 @@ export default function KaizenPlanerPage() {
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
-    const { error } = await supabase.from('kaizen_planer').insert({
+    const { data, error } = await supabase.from('kaizen_planer').insert({
       user_id: user.id,
       naziv, proces, datum_od: datumOd || null, datum_do: datumDo || null,
       trajanje: parseInt(trajanje) || null, voditelj, sponzor, opis,
@@ -148,9 +149,12 @@ export default function KaizenPlanerPage() {
       tim, kpi, ba_prije: baPrije, ba_poslije: baPoslije,
       agenda, akcije,
       zakljucak_good: zakljucakGood, zakljucak_improve: zakljucakImprove, zakljucak_general: zakljucakGeneral,
-    });
+    }).select('id').single();
     setSaving(false);
-    if (!error) setSaved(true);
+    if (!error) {
+      setSaved(true);
+      if (data) syncAkcijeToActions('kaizen_planer', data.id, akcije, { locationId: lokacijaId, departmentId: odjelId });
+    }
   };
 
   const exportPDF = () => {

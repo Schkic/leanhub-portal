@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Trash2, Save, Loader2, Printer, Download, RotateCcw } from 'lucide-react';
 import jsPDF from 'jspdf';
 import LokacijaOdjelPicker from '@/components/LokacijaOdjelPicker';
+import { syncAkcijeToActions } from '@/lib/actions';
 
 const STATUSI = ['📋 Otvoreno', '🔄 U tijeku', '✅ Završeno', '⏸️ Na čekanju'];
 const PRIORITETI = [
@@ -97,7 +98,7 @@ export default function A3Page() {
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
-    const { error } = await supabase.from('a3_obrazac').insert({
+    const { data, error } = await supabase.from('a3_obrazac').insert({
       user_id: user.id,
       naslov, datum_otvaranja: datumOtvaranja, datum_ciljni: datumCiljni,
       broj_a3: brojA3, vlasnik, odjel, tim,
@@ -111,9 +112,12 @@ export default function A3Page() {
       standardizacija, sirenje, lekcije,
       datum_standardizacije: datumStand || null,
       potpis, odobrio, potpis_odobrio: potpisOdobrio,
-    });
+    }).select('id').single();
     setSaving(false);
-    if (!error) setSaved(true);
+    if (!error) {
+      setSaved(true);
+      if (data) syncAkcijeToActions('a3_obrazac', data.id, akcije, { locationId: lokacijaId, departmentId: odjelId });
+    }
   };
 
   const exportPDF = () => {

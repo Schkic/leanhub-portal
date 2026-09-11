@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Plus, Trash2, Save, Loader2, Printer, Download, RotateCcw } from 'lucide-react';
 import jsPDF from 'jspdf';
 import LokacijaOdjelPicker from '@/components/LokacijaOdjelPicker';
+import { syncAkcijeToActions } from '@/lib/actions';
 
 const GUBICI = ['Prekomjerna proizvodnja', 'Čekanje', 'Transport', 'Prekomjerna obrada', 'Zalihe (WIP)', 'Nepotrebno kretanje', 'Greške / škart', 'Neiskorišten talent', 'Sigurnost', 'Ostalo'];
 const PRIORITETI = [
@@ -111,7 +112,7 @@ export default function GembaWalkPage() {
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
-    const { error } = await supabase.from('gemba_walk').insert({
+    const { data, error } = await supabase.from('gemba_walk').insert({
       user_id: user.id,
       datum, pocetak, kraj, voditelj, sudionici,
       lokacija, cilj, napomena,
@@ -121,9 +122,12 @@ export default function GembaWalkPage() {
       sum_poz: sumPoz, sum_prob: sumProb,
       sum_hitno: sumHitno, sum_sljedeci: sumSljedeci || null,
       sum_potpis: sumPotpis,
-    });
+    }).select('id').single();
     setSaving(false);
-    if (!error) setSaved(true);
+    if (!error) {
+      setSaved(true);
+      if (data) syncAkcijeToActions('gemba_walk', data.id, akcije, { locationId: lokacijaId, departmentId: odjelId });
+    }
   };
 
   const exportPDF = () => {

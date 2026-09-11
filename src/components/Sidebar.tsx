@@ -2,11 +2,12 @@
 
 import React from 'react';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Wrench, History, UserCircle, Building2 } from 'lucide-react';
+import { LayoutDashboard, Wrench, History, UserCircle, Building2, ListChecks } from 'lucide-react';
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', desc: 'Pregled obaveza, KPI-jeva i napretka', icon: LayoutDashboard },
   { href: '/alati', label: 'Alati', desc: 'Svi Lean alati i kalkulatori', icon: Wrench },
+  { href: '/akcije', label: 'Akcije', desc: 'Akcijski planovi iz svih alata', icon: ListChecks },
   { href: '/povijest', label: 'Povijest', desc: 'Spremljeni auditi i analize', icon: History },
   { href: '/organizacija', label: 'Organizacija', desc: 'Lokacije, odjeli i članovi tima', icon: Building2 },
   { href: '/profil', label: 'Account', desc: 'Profil, pretplata i postavke', icon: UserCircle },
@@ -15,6 +16,7 @@ const NAV_ITEMS = [
 function isActive(pathname: string, href: string) {
   if (href === '/dashboard') return pathname === '/dashboard' || pathname.startsWith('/dashboard/');
   if (href === '/alati') return pathname === '/alati' || (pathname.startsWith('/alati/') && !pathname.startsWith('/alati/vodici'));
+  if (href === '/akcije') return pathname === '/akcije' || pathname.startsWith('/akcije/');
   if (href === '/povijest') return pathname === '/povijest' || pathname.startsWith('/povijest/');
   if (href === '/organizacija') return pathname === '/organizacija' || pathname.startsWith('/organizacija/');
   if (href === '/profil') return pathname === '/profil';

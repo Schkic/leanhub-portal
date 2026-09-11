@@ -8,6 +8,7 @@ import Sidebar from './Sidebar';
 function isAppPath(pathname: string) {
   if (pathname === '/dashboard' || pathname.startsWith('/dashboard/')) return true;
   if (pathname === '/alati' || (pathname.startsWith('/alati/') && !pathname.startsWith('/alati/vodici'))) return true;
+  if (pathname === '/akcije' || pathname.startsWith('/akcije/')) return true;
   if (pathname === '/povijest' || pathname.startsWith('/povijest/')) return true;
   if (pathname === '/organizacija' || pathname.startsWith('/organizacija/')) return true;
   if (pathname === '/profil') return true;

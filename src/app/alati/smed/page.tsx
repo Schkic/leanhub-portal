@@ -5,6 +5,7 @@ import { supabase, requireAuth } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { Plus, Trash2, Save, Loader2, Printer, Download, RotateCcw } from 'lucide-react';
 import LokacijaOdjelPicker from '@/components/LokacijaOdjelPicker';
+import { syncAkcijeToActions } from '@/lib/actions';
 import jsPDF from 'jspdf';
 
 interface Aktivnost {
@@ -85,14 +86,17 @@ export default function SMEDPage() {
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
-    const { error } = await supabase.from('smed').insert({
+    const { data, error } = await supabase.from('smed').insert({
       user_id: user.id,
       stroj, proces, datum, tim, odjel,
       location_id: lokacijaId || null, department_id: odjelId || null,
       aktivnosti, akcije, napomena,
-    });
+    }).select('id').single();
     setSaving(false);
-    if (!error) setSaved(true);
+    if (!error) {
+      setSaved(true);
+      if (data) syncAkcijeToActions('smed', data.id, akcije, { locationId: lokacijaId, departmentId: odjelId });
+    }
   };
 
   const resetForm = () => {
