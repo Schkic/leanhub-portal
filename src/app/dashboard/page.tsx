@@ -35,6 +35,9 @@ export default function DashboardPage() {
   const [recentVSM, setRecentVSM] = useState<any[]>([]);
   const [recentIshikawa, setRecentIshikawa] = useState<any[]>([]);
   const [recentSMED, setRecentSMED] = useState<any[]>([]);
+  const [recentKaizenPlaner, setRecentKaizenPlaner] = useState<any[]>([]);
+  const [activeActions, setActiveActions] = useState(0);
+  const [overdueActions, setOverdueActions] = useState(0);
 
   // KPI grafovi podaci
   const [oeeHistory, setOeeHistory] = useState<any[]>([]);
@@ -69,7 +72,7 @@ export default function DashboardPage() {
       setHiddenAlati(profileData?.dashboard_hidden_alati || []);
       setOrg(await getCurrentOrg());
 
-      const [a, g, a3, z, o, k, v, ish, smed, oeeAll, auditAll, kaizenAll, todosRes] = await Promise.all([
+      const [a, g, a3, z, o, k, v, ish, smed, kp, oeeAll, auditAll, kaizenAll, todosRes, actionsRes] = await Promise.all([
         supabase.from('audits_5s').select('id, created_at, firma, lokacija, total_score, datum', { count: 'exact' }).order('created_at', { ascending: false }).limit(2),
         supabase.from('gemba_walk').select('id, created_at, voditelj, lokacija, datum', { count: 'exact' }).order('created_at', { ascending: false }).limit(2),
         supabase.from('a3_obrazac').select('id, created_at, naslov, vlasnik, datum_otvaranja, odjel', { count: 'exact' }).order('created_at', { ascending: false }).limit(2),
@@ -79,14 +82,17 @@ export default function DashboardPage() {
         supabase.from('vsm_dijagram').select('id, created_at, naziv, elementi', { count: 'exact' }).order('created_at', { ascending: false }).limit(2),
         supabase.from('ishikawa').select('id, created_at, problem, odjel, datum', { count: 'exact' }).order('created_at', { ascending: false }).limit(2),
         supabase.from('smed').select('id, created_at, stroj, proces, datum, aktivnosti', { count: 'exact' }).order('created_at', { ascending: false }).limit(2),
-        // KPI povijest — zadnjih 12 OEE zapisa
-        supabase.from('oee_kalkulator').select('id, period, created_at, strojevi').eq('user_id', user.id).order('created_at', { ascending: true }).limit(12),
-        // 5S audit povijest
-        supabase.from('audits_5s').select('id, total_score, datum, created_at').eq('user_id', user.id).order('created_at', { ascending: true }).limit(12),
-        // Kaizen po statusu + otvoreni prijedlozi za "automatske" zadatke
-        supabase.from('kaizen_prijedlog').select('id, status, prob_opis, kategorija, prioritet, created_at').eq('user_id', user.id).order('created_at', { ascending: false }),
-        // To-do lista
+        supabase.from('kaizen_planer').select('id, created_at, naziv, proces, datum_od', { count: 'exact' }).order('created_at', { ascending: false }).limit(2),
+        // KPI povijest — zadnjih 12 OEE zapisa cijele organizacije
+        supabase.from('oee_kalkulator').select('id, period, created_at, strojevi').order('created_at', { ascending: true }).limit(12),
+        // 5S audit povijest cijele organizacije
+        supabase.from('audits_5s').select('id, total_score, datum, created_at').order('created_at', { ascending: true }).limit(12),
+        // Kaizen po statusu (cijela organizacija) + otvoreni prijedlozi za "automatske" zadatke
+        supabase.from('kaizen_prijedlog').select('id, status, prob_opis, kategorija, prioritet, created_at').order('created_at', { ascending: false }),
+        // To-do lista — osobna, ostaje po korisniku
         supabase.from('dashboard_todos').select('*').eq('user_id', user.id).order('created_at', { ascending: true }),
+        // Akcije (cijela organizacija)
+        supabase.from('actions').select('id, status, rok'),
       ]);
 
       setRecentAudits(a.data || []);
@@ -98,10 +104,17 @@ export default function DashboardPage() {
       setRecentVSM(v.data || []);
       setRecentIshikawa(ish.data || []);
       setRecentSMED(smed.data || []);
+      setRecentKaizenPlaner(kp.data || []);
       setTodos(todosRes.data || []);
 
-      const counts = [a.count, g.count, a3.count, z.count, o.count, k.count, v.count, ish.count, smed.count];
+      const counts = [a.count, g.count, a3.count, z.count, o.count, k.count, v.count, ish.count, smed.count, kp.count];
       setTotalZapisa(counts.reduce((sum: number, c) => sum + (c || 0), 0));
+
+      const today = new Date(new Date().toDateString());
+      const actions = actionsRes.data || [];
+      const activeRows = actions.filter((r: any) => r.status === 'otvoreno' || r.status === 'u_tijeku');
+      setActiveActions(activeRows.length);
+      setOverdueActions(activeRows.filter((r: any) => r.rok && new Date(r.rok) < today).length);
 
       // OEE graf podaci
       const oeeGraf = (oeeAll.data || []).map((r: any) => ({
@@ -236,6 +249,7 @@ export default function DashboardPage() {
     { href: '/alati/vsm-builder',      icon: '🗺️', label: 'Novi VSM Dijagram',     opis: 'Mapiranje toka vrijednosti.',         bg: 'bg-blue-50 text-blue-700' },
     { href: '/alati/ishikawa',         icon: '🐟', label: 'Novi Ishikawa',         opis: 'Dijagram uzroka i posljedica.',       bg: 'bg-red-50 text-red-600' },
     { href: '/alati/smed',             icon: '⚡', label: 'Nova SMED analiza',     opis: 'Smanjite vrijeme izmjene alata.',     bg: 'bg-yellow-50 text-yellow-600' },
+    { href: '/alati/kaizen-planer',    icon: '📅', label: 'Novi Kaizen Event',     opis: 'Planirajte Kaizen radionicu.',        bg: 'bg-orange-50 text-orange-600' },
   ];
 
   const recentSections = [
@@ -250,76 +264,94 @@ export default function DashboardPage() {
       </a>
     )},
     { data: recentGemba, title: 'Nedavni Gemba Walkovi', render: (g: any) => (
-      <div key={g.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#fafaf8] transition-all">
+      <a key={g.id} href={`/povijest/gemba/${g.id}`} className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#fafaf8] transition-all group">
         <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-lg">🚶</div>
         <div className="flex-1 min-w-0">
           <div className="text-sm font-bold truncate">{g.lokacija || 'Nenavedena lokacija'}</div>
           <div className="text-xs text-[#9a9a9a]">{g.voditelj} · {g.datum ? new Date(g.datum).toLocaleDateString('hr-HR') : ''}</div>
         </div>
-      </div>
+        <span className="text-xs text-[#9a9a9a] group-hover:text-[#1a7a5e]">→</span>
+      </a>
     )},
     { data: recentA3, title: 'Nedavni A3 obrasci', render: (a: any) => (
-      <div key={a.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#fafaf8] transition-all">
+      <a key={a.id} href={`/povijest/a3/${a.id}`} className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#fafaf8] transition-all group">
         <div className="w-10 h-10 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center text-lg">📄</div>
         <div className="flex-1 min-w-0">
           <div className="text-sm font-bold truncate">{a.naslov || 'Bez naslova'}</div>
           <div className="text-xs text-[#9a9a9a]">{a.odjel || '—'} · {a.datum_otvaranja ? new Date(a.datum_otvaranja).toLocaleDateString('hr-HR') : ''}</div>
         </div>
-      </div>
+        <span className="text-xs text-[#9a9a9a] group-hover:text-[#1a7a5e]">→</span>
+      </a>
     )},
     { data: recentZasto, title: 'Nedavne 5x Zašto analize', render: (z: any) => (
-      <div key={z.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#fafaf8] transition-all">
+      <a key={z.id} href={`/povijest/zasto/${z.id}`} className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#fafaf8] transition-all group">
         <div className="w-10 h-10 rounded-lg bg-red-50 text-red-600 flex items-center justify-center text-lg">❓</div>
         <div className="flex-1 min-w-0">
           <div className="text-sm font-bold truncate">{z.odjel || 'Nenavedeni odjel'}</div>
           <div className="text-xs text-[#9a9a9a]">{z.kategorija} · {z.datum ? new Date(z.datum).toLocaleDateString('hr-HR') : ''}</div>
         </div>
-      </div>
+        <span className="text-xs text-[#9a9a9a] group-hover:text-[#1a7a5e]">→</span>
+      </a>
     )},
     { data: recentOEE, title: 'Nedavni OEE izračuni', render: (o: any) => (
-      <div key={o.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#fafaf8] transition-all">
+      <a key={o.id} href={`/povijest/oee/${o.id}`} className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#fafaf8] transition-all group">
         <div className="w-10 h-10 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center text-lg">📊</div>
         <div className="flex-1 min-w-0">
           <div className="text-sm font-bold truncate">{o.pogon || 'Nenavedeni pogon'}</div>
           <div className="text-xs text-[#9a9a9a]">{o.period || '—'} · {Array.isArray(o.strojevi) ? o.strojevi.length : 0} strojeva</div>
         </div>
-      </div>
+        <span className="text-xs text-[#9a9a9a] group-hover:text-[#1a7a5e]">→</span>
+      </a>
     )},
     { data: recentKaizen, title: 'Nedavni Kaizen prijedlozi', render: (k: any) => (
-      <div key={k.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#fafaf8] transition-all">
+      <a key={k.id} href={`/povijest/kaizen/${k.id}`} className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#fafaf8] transition-all group">
         <div className="w-10 h-10 rounded-lg bg-[#e8f5f0] text-[#1a7a5e] flex items-center justify-center text-lg">♾️</div>
         <div className="flex-1 min-w-0">
           <div className="text-sm font-bold truncate">{k.odjel || 'Nenavedeni odjel'}</div>
           <div className="text-xs text-[#9a9a9a]">{k.kategorija || '—'} · {k.status}</div>
         </div>
-      </div>
+        <span className="text-xs text-[#9a9a9a] group-hover:text-[#1a7a5e]">→</span>
+      </a>
     )},
     { data: recentVSM, title: 'Nedavni VSM dijagrami', render: (v: any) => (
-      <div key={v.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#fafaf8] transition-all">
+      <a key={v.id} href={`/povijest/vsm/${v.id}`} className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#fafaf8] transition-all group">
         <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center text-lg">🗺️</div>
         <div className="flex-1 min-w-0">
           <div className="text-sm font-bold truncate">{v.naziv || 'Bez naziva'}</div>
           <div className="text-xs text-[#9a9a9a]">{Array.isArray(v.elementi) ? v.elementi.length : 0} elemenata</div>
         </div>
-      </div>
+        <span className="text-xs text-[#9a9a9a] group-hover:text-[#1a7a5e]">→</span>
+      </a>
     )},
     { data: recentIshikawa, title: 'Nedavni Ishikawa dijagrami', render: (ish: any) => (
-      <div key={ish.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#fafaf8] transition-all">
+      <a key={ish.id} href={`/povijest/ishikawa/${ish.id}`} className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#fafaf8] transition-all group">
         <div className="w-10 h-10 rounded-lg bg-red-50 text-red-600 flex items-center justify-center text-lg">🐟</div>
         <div className="flex-1 min-w-0">
           <div className="text-sm font-bold truncate">{ish.problem || 'Bez opisa'}</div>
           <div className="text-xs text-[#9a9a9a]">{ish.odjel || '—'}</div>
         </div>
-      </div>
+        <span className="text-xs text-[#9a9a9a] group-hover:text-[#1a7a5e]">→</span>
+      </a>
     )},
     { data: recentSMED, title: 'Nedavne SMED analize', render: (s: any) => (
-      <div key={s.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#fafaf8] transition-all">
+      <a key={s.id} href={`/povijest/smed/${s.id}`} className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#fafaf8] transition-all group">
         <div className="w-10 h-10 rounded-lg bg-yellow-50 text-yellow-600 flex items-center justify-center text-lg">⚡</div>
         <div className="flex-1 min-w-0">
           <div className="text-sm font-bold truncate">{s.stroj || 'Nenavedeni stroj'}</div>
           <div className="text-xs text-[#9a9a9a]">{s.proces || '—'} · {Array.isArray(s.aktivnosti) ? s.aktivnosti.length : 0} aktivnosti</div>
         </div>
-      </div>
+        <span className="text-xs text-[#9a9a9a] group-hover:text-[#1a7a5e]">→</span>
+      </a>
+    )},
+    { data: recentKaizenPlaner, title: 'Nedavni Kaizen eventovi', render: (kp: any) => (
+      <a key={kp.id} href={`/povijest/kaizen-planer/${kp.id}`} className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#fafaf8] transition-all group">
+        <div className="w-10 h-10 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center text-lg">📅</div>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-bold truncate">{kp.naziv || 'Bez naziva'}</div>
+          <div className="text-xs text-[#9a9a9a]">{kp.proces || '—'} · {kp.datum_od ? new Date(kp.datum_od).toLocaleDateString('hr-HR') : ''}</div>
+        </div>
+        <span className="text-xs text-[#9a9a9a] group-hover:text-[#1a7a5e]">→</span>
+      </a>
     )},
   ];
 
@@ -391,7 +423,7 @@ export default function DashboardPage() {
         </div>
 
         {/* ── STAT KARTICE ── */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
           <div className="bg-white border border-[#e2e2e2] rounded-2xl p-4">
             <p className="text-[11px] font-bold text-[#9a9a9a] uppercase tracking-wider mb-1">Ukupno zapisa</p>
             <p className="text-2xl font-bold text-[#1a1a1a]">{totalZapisa}</p>
@@ -410,6 +442,13 @@ export default function DashboardPage() {
             <p className="text-[11px] font-bold text-[#9a9a9a] uppercase tracking-wider mb-1">Otvoreni Kaizen prijedlozi</p>
             <p className="text-2xl font-bold text-[#1a1a1a]">{otvoreniKaizen}</p>
           </div>
+          <a href="/akcije" className="bg-white border border-[#e2e2e2] rounded-2xl p-4 hover:border-[#1a7a5e] transition-all block">
+            <p className="text-[11px] font-bold text-[#9a9a9a] uppercase tracking-wider mb-1">Aktivne akcije</p>
+            <p className="text-2xl font-bold text-[#1a1a1a]">
+              {activeActions}
+              {overdueActions > 0 && <span className="text-sm font-bold text-[#dc2626] ml-2">{overdueActions} kasni</span>}
+            </p>
+          </a>
         </div>
 
         {/* ── KPI GRAFOVI ── */}

@@ -15,6 +15,7 @@ export default function HistoryPage() {
   const [vsmDijagrami, setVsmDijagrami] = useState<any[]>([]);
   const [ishikawaDijagrami, setIshikawaDijagrami] = useState<any[]>([]);
   const [smedAnalize, setSmedAnalize] = useState<any[]>([]);
+  const [kaizenEventi, setKaizenEventi] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('5s');
   const router = useRouter();
@@ -24,7 +25,7 @@ export default function HistoryPage() {
       const user = await requireAuth(router);
       if (!user) return;
 
-      const [a, g, a3, z, o, k, v, ish, smed] = await Promise.all([
+      const [a, g, a3, z, o, k, v, ish, smed, kp] = await Promise.all([
         supabase.from('audits_5s').select('id, created_at, firma, lokacija, total_score, datum').order('created_at', { ascending: false }),
         supabase.from('gemba_walk').select('id, created_at, voditelj, lokacija, datum, zapazanja, akcije').order('created_at', { ascending: false }),
         supabase.from('a3_obrazac').select('id, created_at, naslov, vlasnik, datum_otvaranja, odjel, cilj_postignut').order('created_at', { ascending: false }),
@@ -34,6 +35,7 @@ export default function HistoryPage() {
         supabase.from('vsm_dijagram').select('id, created_at, naziv, elementi, konekcije').order('created_at', { ascending: false }),
         supabase.from('ishikawa').select('id, created_at, problem, odjel, datum, korijenski_uzrok').order('created_at', { ascending: false }),
         supabase.from('smed').select('id, created_at, stroj, proces, datum, aktivnosti').order('created_at', { ascending: false }),
+        supabase.from('kaizen_planer').select('id, created_at, naziv, proces, datum_od, voditelj').order('created_at', { ascending: false }),
       ]);
 
       setAudits(a.data || []);
@@ -45,6 +47,7 @@ export default function HistoryPage() {
       setVsmDijagrami(v.data || []);
       setIshikawaDijagrami(ish.data || []);
       setSmedAnalize(smed.data || []);
+      setKaizenEventi(kp.data || []);
       setIsLoading(false);
     };
     fetchAll();
@@ -87,6 +90,7 @@ export default function HistoryPage() {
     { key: 'vsm',      label: '🗺️ VSM',       count: vsmDijagrami.length },
     { key: 'ishikawa', label: '🐟 Ishikawa',  count: ishikawaDijagrami.length },
     { key: 'smed',     label: '⚡ SMED',      count: smedAnalize.length },
+    { key: 'kaizen-planer', label: '📅 Kaizen Event', count: kaizenEventi.length },
   ];
 
   const EmptyState = ({ icon, title, href, label }: any) => (
@@ -322,6 +326,29 @@ export default function HistoryPage() {
                       <span>{s.datum ? new Date(s.datum).toLocaleDateString('hr-HR') : '—'}</span>
                     </div>
                     <span className="text-xs text-[#9a9a9a]">⚡ {Array.isArray(s.aktivnosti) ? s.aktivnosti.length : 0} aktivnosti</span>
+                  </div>
+                  <ChevronRight className="text-[#e2e2e2] group-hover:text-[#1a7a5e] shrink-0" size={20}/>
+                </a>
+              ))}
+          </div>
+        )}
+
+        {activeTab === 'kaizen-planer' && (
+          <div className="space-y-4">
+            {kaizenEventi.length === 0 ? <EmptyState icon="📅" title="Još nemate Kaizen eventova" href="/alati/kaizen-planer" label="Novi Kaizen Event"/> :
+              kaizenEventi.map(kp => (
+                <a key={kp.id} href={`/povijest/kaizen-planer/${kp.id}`} className="bg-white border border-[#e2e2e2] rounded-xl p-4 hover:border-[#1a7a5e] hover:shadow-md transition-all flex items-center gap-4 group">
+                  <div className="w-12 h-12 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center text-xl shrink-0">📅</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="font-bold truncate">{kp.naziv || 'Bez naziva'}</span>
+                      <span className="text-[10px] uppercase font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded">Kaizen Event</span>
+                    </div>
+                    <div className="flex flex-wrap gap-x-4 text-xs text-[#9a9a9a]">
+                      <span>{kp.proces || '—'}</span>
+                      <span>{kp.voditelj || '—'}</span>
+                      <span>{kp.datum_od ? new Date(kp.datum_od).toLocaleDateString('hr-HR') : '—'}</span>
+                    </div>
                   </div>
                   <ChevronRight className="text-[#e2e2e2] group-hover:text-[#1a7a5e] shrink-0" size={20}/>
                 </a>
