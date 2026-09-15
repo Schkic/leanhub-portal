@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Wrench, History, UserCircle, Building2, ListChecks } from 'lucide-react';
+import { LayoutDashboard, Wrench, History, UserCircle, Building2, ListChecks, Contact } from 'lucide-react';
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', desc: 'Pregled obaveza, KPI-jeva i napretka', icon: LayoutDashboard },
@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: '/akcije', label: 'Akcije', desc: 'Akcijski planovi iz svih alata', icon: ListChecks },
   { href: '/povijest', label: 'Povijest', desc: 'Spremljeni auditi i analize', icon: History },
   { href: '/organizacija', label: 'Organizacija', desc: 'Lokacije, odjeli i članovi tima', icon: Building2 },
+  { href: '/vizitka', label: 'Vizitka', desc: 'Vaša javna digitalna vizitka', icon: Contact },
   { href: '/profil', label: 'Account', desc: 'Profil, pretplata i postavke', icon: UserCircle },
 ];
 
@@ -19,6 +20,7 @@ function isActive(pathname: string, href: string) {
   if (href === '/akcije') return pathname === '/akcije' || pathname.startsWith('/akcije/');
   if (href === '/povijest') return pathname === '/povijest' || pathname.startsWith('/povijest/');
   if (href === '/organizacija') return pathname === '/organizacija' || pathname.startsWith('/organizacija/');
+  if (href === '/vizitka') return pathname === '/vizitka';
   if (href === '/profil') return pathname === '/profil';
   return false;
 }

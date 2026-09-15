@@ -11,6 +11,7 @@ function isAppPath(pathname: string) {
   if (pathname === '/akcije' || pathname.startsWith('/akcije/')) return true;
   if (pathname === '/povijest' || pathname.startsWith('/povijest/')) return true;
   if (pathname === '/organizacija' || pathname.startsWith('/organizacija/')) return true;
+  if (pathname === '/vizitka') return true;
   if (pathname === '/profil') return true;
   return false;
 }
