@@ -9,6 +9,7 @@ import {
   Tooltip, ResponsiveContainer, ReferenceLine, PieChart, Pie, Cell, Legend
 } from 'recharts';
 import { calcStrojAvg, getOEEColor } from '@/lib/oee';
+import CommunityWidget from '@/components/dashboard/CommunityWidget';
 
 const TODO_BOJE = ['#1a7a5e', '#2563eb', '#dc2626', '#ca8a04', '#7c3aed', '#0891b2', '#ea580c', '#6b7280'];
 
@@ -748,6 +749,8 @@ export default function DashboardPage() {
               </>
               )}
             </div>
+
+            <CommunityWidget user={user} />
           </div>
         </div>
       </div>
