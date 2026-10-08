@@ -153,9 +153,24 @@ const ALATI = [
     btnBg: 'bg-emerald-600 hover:bg-emerald-700',
     vodicBg: '',
   },
+  {
+    href: '/alati/tpm',
+    vodic: null,
+    icon: '🛠️',
+    naziv: 'TPM — Autonomno održavanje',
+    opis: 'CILT checklista (čišćenje, inspekcija, podmazivanje, pritezanje) koju operater provodi na vlastitom stroju.',
+    kategorija: 'Održavanje',
+    trajanje: '10–20 min',
+    razina: 'Početna',
+    headerBg: 'bg-red-50',
+    headerText: 'text-red-700',
+    border: 'border-red-300',
+    btnBg: 'bg-red-600 hover:bg-red-700',
+    vodicBg: '',
+  },
 ];
 
-const KATEGORIJE = ['Sve', 'Organizacija', 'Dijagnostika', 'Rješavanje problema', 'Analiza uzroka', 'Mjerenje', 'Kontinuirano poboljšanje', 'Mapiranje', 'Fleksibilnost', 'Planiranje'];
+const KATEGORIJE = ['Sve', 'Organizacija', 'Dijagnostika', 'Rješavanje problema', 'Analiza uzroka', 'Mjerenje', 'Kontinuirano poboljšanje', 'Mapiranje', 'Fleksibilnost', 'Planiranje', 'Održavanje'];
 const RAZINE = ['Sve razine', 'Početna', 'Srednja', 'Napredna'];
 
 const RAZINA_COLOR: Record<string, string> = {
