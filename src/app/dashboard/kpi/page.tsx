@@ -7,8 +7,9 @@ import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine, Cell,
 } from 'recharts';
-import { Loader2, TrendingUp, Target, Gauge, ListChecks, MapPin, Boxes } from 'lucide-react';
+import { Loader2, TrendingUp, Target, Gauge, ListChecks, MapPin, Boxes, Download } from 'lucide-react';
 import { calcStrojAvg, getOEEColor } from '@/lib/oee';
+import jsPDF from 'jspdf';
 
 interface Audit5S { id: string; datum: string; total_score: number; location_id: string | null; department_id: string | null; }
 interface OeeRow { id: string; created_at: string; period: string | null; strojevi: any[]; location_id: string | null; department_id: string | null; }
@@ -111,6 +112,105 @@ export default function KPIDashboard() {
   const byLocation = useMemo(() => aggregate('location_id', locations), [locations, audits, oeeRows, kaizen, actionsData]);
   const byDepartment = useMemo(() => aggregate('department_id', departments), [departments, audits, oeeRows, kaizen, actionsData]);
 
+  const filterLabel = () => {
+    const locName = filterLoc ? locations.find((l) => l.id === filterLoc)?.naziv : '';
+    const depName = filterDep ? departments.find((d) => d.id === filterDep)?.naziv : '';
+    if (locName && depName) return `${locName} — ${depName}`;
+    if (locName) return locName;
+    if (depName) return depName;
+    return 'Cijela organizacija';
+  };
+
+  const exportPDF = () => {
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const W = 210, M = 14, CW = W - M * 2;
+    let y = 0;
+
+    doc.setFillColor(14, 95, 70); doc.rect(0, 0, W, 24, 'F');
+    doc.setTextColor(255, 255, 255); doc.setFontSize(15); doc.setFont('helvetica', 'bold');
+    doc.text('Leanopedija App', M, 10);
+    doc.setFontSize(10); doc.setFont('helvetica', 'normal');
+    doc.text('Mjesečni izvještaj upravi', M, 18);
+    doc.setFontSize(8);
+    doc.text(filterLabel(), W - M, 10, { align: 'right' });
+    doc.text(new Date().toLocaleDateString('hr-HR', { month: 'long', year: 'numeric' }), W - M, 17, { align: 'right' });
+    y = 32;
+
+    const checkPage = (needed = 15) => { if (y + needed > 280) { doc.addPage(); y = 20; } };
+
+    // KPI sažetak
+    doc.setTextColor(0, 0, 0);
+    const kpis: [string, string][] = [
+      ['Prosj. 5S rezultat', avg5s !== null ? `${avg5s}/100` : '—'],
+      ['Prosj. OEE', avgOee !== null ? `${avgOee}%` : '—'],
+      ['Otvoreni Kaizen', String(openKaizen)],
+      ['Aktivne akcije', `${activeActions}${overdueActions > 0 ? ` (${overdueActions} zakašnjelo)` : ''}`],
+    ];
+    const kpiW = CW / 4;
+    kpis.forEach(([label, val], i) => {
+      const x = M + i * kpiW;
+      doc.setFillColor(248, 248, 246); doc.roundedRect(x, y, kpiW - 4, 22, 2, 2, 'F');
+      doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(90, 90, 90);
+      doc.text(label, x + 3, y + 7, { maxWidth: kpiW - 8 });
+      doc.setFontSize(13); doc.setFont('helvetica', 'bold'); doc.setTextColor(26, 26, 26);
+      doc.text(val, x + 3, y + 16);
+    });
+    y += 30;
+    doc.setTextColor(0, 0, 0);
+
+    // Trend tablice
+    const drawTrendTable = (title: string, rows: [string, string][]) => {
+      if (rows.length === 0) return;
+      checkPage(14 + rows.length * 5);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.text(title, M, y); y += 6;
+      doc.setFontSize(8);
+      rows.forEach(([a, b], idx) => {
+        if (idx % 2 === 0) { doc.setFillColor(250, 250, 248); doc.rect(M, y - 3.5, CW, 5, 'F'); }
+        doc.setFont('helvetica', 'normal'); doc.setTextColor(60, 60, 60);
+        doc.text(a, M + 2, y);
+        doc.setFont('helvetica', 'bold'); doc.setTextColor(0, 0, 0);
+        doc.text(b, M + 60, y);
+        y += 5;
+      });
+      y += 5;
+    };
+    drawTrendTable('KRETANJE 5S REZULTATA', auditChartData.map((d) => [d.name, `${d.rezultat}/100`]));
+    drawTrendTable('KRETANJE OEE', oeeChartData.map((d) => [d.period, `${d.OEE}%`]));
+
+    // Raspodjela tablice
+    const drawGroupTable = (title: string, rows: typeof byLocation) => {
+      if (rows.length === 0) return;
+      checkPage(16 + rows.length * 6);
+      doc.setFillColor(26, 122, 94); doc.rect(M, y - 4, CW, 8, 'F');
+      doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+      doc.text(title, M + 2, y + 1); y += 10;
+      const hdr = ['Naziv', '5S', 'OEE', 'Otv. Kaizen', 'Akt. akcije', 'Zakašnjelo'];
+      const cw = [60, 22, 22, 28, 28, 22]; let x = M;
+      doc.setFillColor(240, 240, 240); doc.rect(M, y - 4, CW, 6, 'F');
+      doc.setTextColor(0, 0, 0); doc.setFontSize(8); doc.setFont('helvetica', 'bold');
+      hdr.forEach((h, i) => { doc.text(h, x + 1, y); x += cw[i]; }); y += 4;
+      doc.setFont('helvetica', 'normal');
+      rows.forEach((r, idx) => {
+        checkPage(8);
+        const vals = [r.naziv, r.avg5s !== null ? `${r.avg5s}/100` : '—', r.avgOee !== null ? `${r.avgOee}%` : '—', String(r.openKaizen), String(r.activeActions), String(r.overdueActions)];
+        x = M; if (idx % 2 === 0) { doc.setFillColor(250, 250, 248); doc.rect(M, y - 3, CW, 6, 'F'); }
+        vals.forEach((v, i) => {
+          if (i === 5 && r.overdueActions > 0) doc.setTextColor(220, 38, 38); else doc.setTextColor(0, 0, 0);
+          doc.text(String(v).substring(0, Math.floor(cw[i] / 1.6)), x + 1, y); x += cw[i];
+        });
+        doc.setTextColor(0, 0, 0);
+        y += 6;
+      });
+      y += 6;
+    };
+    drawGroupTable('RASPODJELA PO LOKACIJI', byLocation);
+    drawGroupTable('RASPODJELA PO ODJELU', byDepartment);
+
+    doc.setFontSize(7); doc.setTextColor(150, 150, 150);
+    doc.text('Izrađeno u Leanopedija App — app.leanopedija.hr', M, 290);
+    doc.save('Mjesecni-izvjestaj-' + new Date().toISOString().slice(0, 7) + '.pdf');
+  };
+
   if (loading) return (
     <div className="flex flex-col items-center justify-center min-h-[400px] text-[#9a9a9a]">
       <Loader2 className="animate-spin mb-4" size={32} />
@@ -129,6 +229,13 @@ export default function KPIDashboard() {
       </div>
 
       <div className="max-w-[1100px] mx-auto px-6 mt-8">
+
+        {/* Mjesečni izvještaj */}
+        <div className="flex justify-end mb-4">
+          <button onClick={exportPDF} className="flex items-center gap-2 bg-[#1a7a5e] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#155f49] transition-all">
+            <Download size={16} /> Preuzmi mjesečni izvještaj (PDF)
+          </button>
+        </div>
 
         {/* Filter */}
         {(locations.length > 0 || departments.length > 0) && (
