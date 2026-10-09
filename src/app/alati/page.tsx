@@ -155,7 +155,7 @@ const ALATI = [
   },
   {
     href: '/alati/tpm',
-    vodic: null,
+    vodic: '/alati/vodici/tpm',
     icon: '🛠️',
     naziv: 'TPM — Autonomno održavanje',
     opis: 'CILT checklista (čišćenje, inspekcija, podmazivanje, pritezanje) koju operater provodi na vlastitom stroju.',
@@ -166,11 +166,11 @@ const ALATI = [
     headerText: 'text-red-700',
     border: 'border-red-300',
     btnBg: 'bg-red-600 hover:bg-red-700',
-    vodicBg: '',
+    vodicBg: 'border-red-400 text-red-700 hover:bg-red-50',
   },
   {
     href: '/alati/standardizirani-rad',
-    vodic: null,
+    vodic: '/alati/vodici/standardizirani-rad',
     icon: '📐',
     naziv: 'Standardizirani rad',
     opis: 'Tablica kombinacije standardnog rada (SWCT) — ručno, strojno i hodno vrijeme po koraku, usporedba s takt vremenom.',
@@ -181,7 +181,7 @@ const ALATI = [
     headerText: 'text-indigo-700',
     border: 'border-indigo-300',
     btnBg: 'bg-indigo-600 hover:bg-indigo-700',
-    vodicBg: '',
+    vodicBg: 'border-indigo-400 text-indigo-700 hover:bg-indigo-50',
   },
   {
     href: '/alati/lpa',
