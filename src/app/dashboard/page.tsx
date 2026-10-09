@@ -38,6 +38,7 @@ export default function DashboardPage() {
   const [recentSMED, setRecentSMED] = useState<any[]>([]);
   const [recentKaizenPlaner, setRecentKaizenPlaner] = useState<any[]>([]);
   const [recentTPM, setRecentTPM] = useState<any[]>([]);
+  const [recentStandardRad, setRecentStandardRad] = useState<any[]>([]);
   const [activeActions, setActiveActions] = useState(0);
   const [overdueActions, setOverdueActions] = useState(0);
 
@@ -74,7 +75,7 @@ export default function DashboardPage() {
       setHiddenAlati(profileData?.dashboard_hidden_alati || []);
       setOrg(await getCurrentOrg());
 
-      const [a, g, a3, z, o, k, v, ish, smed, kp, tpm, oeeAll, auditAll, kaizenAll, todosRes, actionsRes] = await Promise.all([
+      const [a, g, a3, z, o, k, v, ish, smed, kp, tpm, sr, oeeAll, auditAll, kaizenAll, todosRes, actionsRes] = await Promise.all([
         supabase.from('audits_5s').select('id, created_at, firma, lokacija, total_score, datum', { count: 'exact' }).order('created_at', { ascending: false }).limit(2),
         supabase.from('gemba_walk').select('id, created_at, voditelj, lokacija, datum', { count: 'exact' }).order('created_at', { ascending: false }).limit(2),
         supabase.from('a3_obrazac').select('id, created_at, naslov, vlasnik, datum_otvaranja, odjel', { count: 'exact' }).order('created_at', { ascending: false }).limit(2),
@@ -86,6 +87,7 @@ export default function DashboardPage() {
         supabase.from('smed').select('id, created_at, stroj, proces, datum, aktivnosti', { count: 'exact' }).order('created_at', { ascending: false }).limit(2),
         supabase.from('kaizen_planer').select('id, created_at, naziv, proces, datum_od', { count: 'exact' }).order('created_at', { ascending: false }).limit(2),
         supabase.from('tpm_checklist').select('id, created_at, stroj, datum, smjena', { count: 'exact' }).order('created_at', { ascending: false }).limit(2),
+        supabase.from('standard_work').select('id, created_at, proces, datum, operater', { count: 'exact' }).order('created_at', { ascending: false }).limit(2),
         // KPI povijest — zadnjih 12 OEE zapisa cijele organizacije
         supabase.from('oee_kalkulator').select('id, period, created_at, strojevi').order('created_at', { ascending: true }).limit(12),
         // 5S audit povijest cijele organizacije
@@ -109,9 +111,10 @@ export default function DashboardPage() {
       setRecentSMED(smed.data || []);
       setRecentKaizenPlaner(kp.data || []);
       setRecentTPM(tpm.data || []);
+      setRecentStandardRad(sr.data || []);
       setTodos(todosRes.data || []);
 
-      const counts = [a.count, g.count, a3.count, z.count, o.count, k.count, v.count, ish.count, smed.count, kp.count, tpm.count];
+      const counts = [a.count, g.count, a3.count, z.count, o.count, k.count, v.count, ish.count, smed.count, kp.count, tpm.count, sr.count];
       setTotalZapisa(counts.reduce((sum: number, c) => sum + (c || 0), 0));
 
       const today = new Date(new Date().toDateString());
@@ -255,6 +258,7 @@ export default function DashboardPage() {
     { href: '/alati/smed',             icon: '⚡', label: 'Nova SMED analiza',     opis: 'Smanjite vrijeme izmjene alata.',     bg: 'bg-yellow-50 text-yellow-600' },
     { href: '/alati/kaizen-planer',    icon: '📅', label: 'Novi Kaizen Event',     opis: 'Planirajte Kaizen radionicu.',        bg: 'bg-orange-50 text-orange-600' },
     { href: '/alati/tpm',              icon: '🛠️', label: 'Nova TPM checklista',   opis: 'Autonomno održavanje stroja.',        bg: 'bg-red-50 text-red-600' },
+    { href: '/alati/standardizirani-rad', icon: '📐', label: 'Novi standardizirani rad', opis: 'SWCT tablica i takt vrijeme.',     bg: 'bg-indigo-50 text-indigo-700' },
   ];
 
   const recentSections = [
@@ -364,6 +368,16 @@ export default function DashboardPage() {
         <div className="flex-1 min-w-0">
           <div className="text-sm font-bold truncate">{t.stroj || 'Nenavedeni stroj'}</div>
           <div className="text-xs text-[#9a9a9a]">{t.smjena || '—'} · {t.datum ? new Date(t.datum).toLocaleDateString('hr-HR') : ''}</div>
+        </div>
+        <span className="text-xs text-[#9a9a9a] group-hover:text-[#1a7a5e]">→</span>
+      </a>
+    )},
+    { data: recentStandardRad, title: 'Nedavni standardizirani rad', render: (sr: any) => (
+      <a key={sr.id} href={`/povijest/standardizirani-rad/${sr.id}`} className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#fafaf8] transition-all group">
+        <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-700 flex items-center justify-center text-lg">📐</div>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-bold truncate">{sr.proces || 'Nenavedeni proces'}</div>
+          <div className="text-xs text-[#9a9a9a]">{sr.operater || '—'} · {sr.datum ? new Date(sr.datum).toLocaleDateString('hr-HR') : ''}</div>
         </div>
         <span className="text-xs text-[#9a9a9a] group-hover:text-[#1a7a5e]">→</span>
       </a>

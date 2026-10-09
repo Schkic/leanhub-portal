@@ -168,9 +168,24 @@ const ALATI = [
     btnBg: 'bg-red-600 hover:bg-red-700',
     vodicBg: '',
   },
+  {
+    href: '/alati/standardizirani-rad',
+    vodic: null,
+    icon: '📐',
+    naziv: 'Standardizirani rad',
+    opis: 'Tablica kombinacije standardnog rada (SWCT) — ručno, strojno i hodno vrijeme po koraku, usporedba s takt vremenom.',
+    kategorija: 'Standardizacija',
+    trajanje: '45–90 min',
+    razina: 'Srednja',
+    headerBg: 'bg-indigo-50',
+    headerText: 'text-indigo-700',
+    border: 'border-indigo-300',
+    btnBg: 'bg-indigo-600 hover:bg-indigo-700',
+    vodicBg: '',
+  },
 ];
 
-const KATEGORIJE = ['Sve', 'Organizacija', 'Dijagnostika', 'Rješavanje problema', 'Analiza uzroka', 'Mjerenje', 'Kontinuirano poboljšanje', 'Mapiranje', 'Fleksibilnost', 'Planiranje', 'Održavanje'];
+const KATEGORIJE = ['Sve', 'Organizacija', 'Dijagnostika', 'Rješavanje problema', 'Analiza uzroka', 'Mjerenje', 'Kontinuirano poboljšanje', 'Mapiranje', 'Fleksibilnost', 'Planiranje', 'Održavanje', 'Standardizacija'];
 const RAZINE = ['Sve razine', 'Početna', 'Srednja', 'Napredna'];
 
 const RAZINA_COLOR: Record<string, string> = {
