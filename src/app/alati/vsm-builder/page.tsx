@@ -3,8 +3,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase, requireAuth } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import { Save, Loader2, Trash2, Plus, X, ChevronDown, ChevronUp, HelpCircle, BookOpen, Image as ImageIcon } from 'lucide-react';
+import { Save, Loader2, Trash2, Plus, X, ChevronDown, ChevronUp, HelpCircle, BookOpen, Image as ImageIcon, ZoomIn, ZoomOut, Maximize2, RotateCcw, FileDown } from 'lucide-react';
 import LokacijaOdjelPicker from '@/components/LokacijaOdjelPicker';
+import jsPDF from 'jspdf';
 
 type ElementType = 'supplier' | 'customer' | 'process' | 'inventory' | 'transport' |
   'supermarket' | 'kaizen' | 'control' | 'fifo' | 'operator' |
@@ -250,7 +251,10 @@ export default function VSMPage() {
   const [odjelId, setOdjelId] = useState('');
   const [raspVrijeme, setRaspVrijeme] = useState('27600');
   const [potraznja, setPotraznja] = useState('500');
+  const [zoom, setZoom] = useState(1);
   const svgRef = useRef<SVGSVGElement>(null);
+  const canvasWrapRef = useRef<HTMLDivElement>(null);
+  const CANVAS_W = 1800, CANVAS_H = 1000;
 
   const takt = (() => {
     const avail = parseFloat(raspVrijeme);
@@ -282,7 +286,7 @@ export default function VSMPage() {
     const svg = svgRef.current;
     if (!svg) return { x: 0, y: 0 };
     const rect = svg.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    return { x: (e.clientX - rect.left) / zoom, y: (e.clientY - rect.top) / zoom };
   };
 
   const onElementMouseDown = (e: React.MouseEvent, id: string) => {
@@ -342,6 +346,93 @@ export default function VSMPage() {
     });
     setSaving(false);
     if (!error) setSaved(true);
+  };
+
+  const getDiagramBounds = () => {
+    const PAD = 40;
+    const minX = Math.min(...elements.map(e => e.x)) - PAD;
+    const minY = Math.min(...elements.map(e => e.y)) - PAD;
+    const maxX = Math.max(...elements.map(e => e.x + ELEMENT_DEFS[e.type].w)) + PAD;
+    const maxY = Math.max(...elements.map(e => e.y + ELEMENT_DEFS[e.type].h)) + PAD;
+    return { minX, minY, maxX, maxY, w: maxX - minX, h: maxY - minY };
+  };
+
+  const clearCanvas = () => {
+    if (elements.length === 0 && konekcije.length === 0) return;
+    if (!confirm('Isprazniti cijelo platno? Ova radnja se ne može poništiti.')) return;
+    setElements([]); setKonekcije([]); setSelected(null); setZoom(1);
+  };
+
+  const zoomIn = () => setZoom(z => Math.min(2, +(z + 0.1).toFixed(2)));
+  const zoomOut = () => setZoom(z => Math.max(0.25, +(z - 0.1).toFixed(2)));
+  const zoomReset = () => setZoom(1);
+
+  const fitToView = () => {
+    const wrap = canvasWrapRef.current;
+    if (!wrap) return;
+    if (elements.length === 0) { setZoom(1); return; }
+    const b = getDiagramBounds();
+    const scale = Math.min(wrap.clientWidth / b.w, wrap.clientHeight / b.h, 2);
+    const z = Math.max(0.25, +scale.toFixed(2));
+    setZoom(z);
+    requestAnimationFrame(() => {
+      wrap.scrollLeft = b.minX * z;
+      wrap.scrollTop = Math.max(0, b.minY * z);
+    });
+  };
+
+  const rasterize = (): Promise<{ canvasImg: HTMLCanvasElement; w: number; h: number }> => {
+    const svg = svgRef.current!;
+    const b = getDiagramBounds();
+    const { w, h } = b;
+    const clone = svg.cloneNode(true) as SVGSVGElement;
+    clone.setAttribute('width', String(w));
+    clone.setAttribute('height', String(h));
+    clone.setAttribute('viewBox', `${b.minX} ${b.minY} ${w} ${h}`);
+    clone.removeAttribute('style');
+    const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    bgRect.setAttribute('x', String(b.minX));
+    bgRect.setAttribute('y', String(b.minY));
+    bgRect.setAttribute('width', String(w));
+    bgRect.setAttribute('height', String(h));
+    bgRect.setAttribute('fill', '#fafaf8');
+    clone.insertBefore(bgRect, clone.firstChild);
+    const svgData = new XMLSerializer().serializeToString(clone);
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(svgBlob);
+    return new Promise((resolve) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const scale = 2;
+        const canvasImg = document.createElement('canvas');
+        canvasImg.width = w * scale; canvasImg.height = h * scale;
+        const ctx = canvasImg.getContext('2d');
+        if (ctx) { ctx.scale(scale, scale); ctx.drawImage(img, 0, 0, w, h); }
+        URL.revokeObjectURL(url);
+        resolve({ canvasImg, w, h });
+      };
+      img.src = url;
+    });
+  };
+
+  const exportPDF = async () => {
+    if (elements.length === 0) { alert('Dodajte barem jedan element prije izvoza.'); return; }
+    const { canvasImg, w, h } = await rasterize();
+    const orientation = w >= h ? 'landscape' : 'portrait';
+    const doc = new jsPDF({ orientation, unit: 'mm', format: 'a4' });
+    const pageW = doc.internal.pageSize.getWidth(), pageH = doc.internal.pageSize.getHeight();
+    const M = 10;
+    doc.setFillColor(26, 122, 94); doc.rect(0, 0, pageW, 16, 'F');
+    doc.setTextColor(255, 255, 255); doc.setFontSize(13); doc.setFont('helvetica', 'bold');
+    doc.text('Leanopedija App — VSM mapa', M, 10);
+    doc.setFontSize(8); doc.text(new Date().toLocaleDateString('hr-HR'), pageW - M, 10, { align: 'right' });
+    const availW = pageW - M * 2, availH = pageH - 26;
+    const ratio = Math.min(availW / canvasImg.width, availH / canvasImg.height);
+    const imgW = canvasImg.width * ratio, imgH = canvasImg.height * ratio;
+    doc.addImage(canvasImg.toDataURL('image/png'), 'PNG', M, 22, imgW, imgH);
+    doc.setFontSize(7); doc.setTextColor(150, 150, 150);
+    doc.text('Izrađeno u Leanopedija App — app.leanopedija.hr', M, pageH - 6);
+    doc.save(`VSM-${naziv.replace(/\s+/g, '-')}-${new Date().toISOString().slice(0, 10)}.pdf`);
   };
 
   const exportPNG = () => {
@@ -406,16 +497,34 @@ export default function VSMPage() {
       <div className="bg-white border-b border-[#e2e2e2] px-6 py-4 flex items-center gap-4">
         <div className="inline-flex items-center gap-2 text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1 rounded-full shrink-0">🗺️ VSM Builder</div>
         <input type="text" className="font-serif text-xl text-[#1a1a1a] bg-transparent border-none outline-none flex-1 min-w-0" value={naziv} onChange={e => setNaziv(e.target.value)}/>
-        <div className="flex gap-2 shrink-0">
+        <div className="flex gap-2 shrink-0 items-center">
+          <button onClick={clearCanvas}
+            className="flex items-center gap-2 border border-[#e2e2e2] text-[#5a5a5a] px-3 py-2 rounded-lg text-sm font-semibold hover:bg-red-50 hover:text-red-600 transition-all">
+            <Trash2 size={16}/> Isprazni platno
+          </button>
+          <button onClick={fitToView}
+            className="flex items-center gap-2 border border-[#e2e2e2] text-[#5a5a5a] px-3 py-2 rounded-lg text-sm font-semibold hover:bg-[#e8f5f0] hover:text-[#1a7a5e] transition-all">
+            <Maximize2 size={16}/> Uklopi
+          </button>
+          <div className="flex items-center gap-0.5 bg-[#fafaf8] border border-[#e2e2e2] rounded-lg p-0.5">
+            <button onClick={zoomOut} title="Smanji" className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-white text-[#5a5a5a]"><ZoomOut size={15}/></button>
+            <span className="text-xs font-semibold text-[#5a5a5a] w-10 text-center select-none">{Math.round(zoom*100)}%</span>
+            <button onClick={zoomIn} title="Povećaj" className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-white text-[#5a5a5a]"><ZoomIn size={15}/></button>
+            <button onClick={zoomReset} title="Vrati na 100%" className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-white text-[#5a5a5a]"><RotateCcw size={13}/></button>
+          </div>
+          <button onClick={exportPNG}
+            className="flex items-center gap-2 border border-[#e2e2e2] text-[#5a5a5a] px-3 py-2 rounded-lg text-sm font-semibold hover:bg-[#e8f5f0] hover:text-[#1a7a5e] transition-all">
+            <ImageIcon size={16}/> PNG
+          </button>
+          <button onClick={exportPDF}
+            className="flex items-center gap-2 border border-[#e2e2e2] text-[#5a5a5a] px-3 py-2 rounded-lg text-sm font-semibold hover:bg-[#e8f5f0] hover:text-[#1a7a5e] transition-all">
+            <FileDown size={16}/> PDF
+          </button>
           <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 bg-[#1a7a5e] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#155f49] transition-all disabled:opacity-70">
             {saving ? <Loader2 size={16} className="animate-spin"/> : <Save size={16}/>}
             {saving ? 'Spremam...' : 'Spremi'}
           </button>
           {saved && <span className="text-sm text-[#1a7a5e] font-semibold self-center">✅</span>}
-          <button onClick={exportPNG}
-            className="flex items-center gap-2 border border-[#e2e2e2] text-[#5a5a5a] px-3 py-2 rounded-lg text-sm font-semibold hover:bg-[#e8f5f0] hover:text-[#1a7a5e] transition-all">
-            <ImageIcon size={16}/> Preuzmi PNG
-          </button>
           <button onClick={() => setShowHelp(true)}
             className="flex items-center gap-2 border border-[#e2e2e2] text-[#5a5a5a] px-3 py-2 rounded-lg text-sm font-semibold hover:bg-[#e8f5f0] hover:text-[#1a7a5e] transition-all">
             <HelpCircle size={16}/> Upute
@@ -532,10 +641,10 @@ export default function VSMPage() {
         </div>
 
         {/* Canvas */}
-        <div className="flex-1 overflow-auto">
-          <svg ref={svgRef} width={1800} height={1000}
+        <div className="flex-1 overflow-auto" ref={canvasWrapRef} style={{ minWidth: 0 }}>
+          <svg ref={svgRef} width={CANVAS_W * zoom} height={CANVAS_H * zoom} viewBox={`0 0 ${CANVAS_W} ${CANVAS_H}`} preserveAspectRatio="xMinYMin meet"
             className="cursor-default select-none"
-            style={{ backgroundImage: 'radial-gradient(#e2e2e2 1px, transparent 1px)', backgroundSize: '24px 24px', backgroundColor: '#fafaf8' }}
+            style={{ backgroundImage: 'radial-gradient(#e2e2e2 1px, transparent 1px)', backgroundSize: `${24*zoom}px ${24*zoom}px`, backgroundColor: '#fafaf8' }}
             onMouseMove={onMouseMove} onMouseUp={onMouseUp} onClick={onSVGClick}>
 
             {konekcije.map(k => <KonekcijaLine key={k.id} from={k.fromId} to={k.toId} tip={k.tip} elements={elements}/>)}
