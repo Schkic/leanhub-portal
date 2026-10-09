@@ -95,7 +95,7 @@ const ALATI = [
   },
   {
     href: '/alati/vsm-builder',
-    vodic: null,
+    vodic: '/alati/vodici/vsm',
     icon: '🗺️',
     naziv: 'VSM Builder',
     opis: 'Vizualno mapiranje toka vrijednosti — identificirajte gubitke u cijelom procesu.',
@@ -106,7 +106,7 @@ const ALATI = [
     headerText: 'text-blue-800',
     border: 'border-blue-400',
     btnBg: 'bg-blue-700 hover:bg-blue-800',
-    vodicBg: '',
+    vodicBg: 'border-blue-400 text-blue-700 hover:bg-blue-50',
   },
   {
     href: '/alati/ishikawa',
