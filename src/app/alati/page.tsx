@@ -183,6 +183,21 @@ const ALATI = [
     btnBg: 'bg-indigo-600 hover:bg-indigo-700',
     vodicBg: '',
   },
+  {
+    href: '/alati/lpa',
+    vodic: null,
+    icon: '🔁',
+    naziv: 'LPA — Layered Process Audit',
+    opis: 'Kratki, ponavljajući audit jedne točke procesa na više razina odgovornosti — potvrđuje da se standard stvarno poštuje.',
+    kategorija: 'Standardizacija',
+    trajanje: '10–15 min',
+    razina: 'Srednja',
+    headerBg: 'bg-cyan-50',
+    headerText: 'text-cyan-700',
+    border: 'border-cyan-300',
+    btnBg: 'bg-cyan-600 hover:bg-cyan-700',
+    vodicBg: '',
+  },
 ];
 
 const KATEGORIJE = ['Sve', 'Organizacija', 'Dijagnostika', 'Rješavanje problema', 'Analiza uzroka', 'Mjerenje', 'Kontinuirano poboljšanje', 'Mapiranje', 'Fleksibilnost', 'Planiranje', 'Održavanje', 'Standardizacija'];
