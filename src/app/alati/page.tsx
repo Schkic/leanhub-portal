@@ -198,9 +198,24 @@ const ALATI = [
     btnBg: 'bg-cyan-600 hover:bg-cyan-700',
     vodicBg: '',
   },
+  {
+    href: '/alati/poka-yoke',
+    vodic: null,
+    icon: '🛡️',
+    naziv: 'Poka-Yoke registar',
+    opis: 'Evidencija rješenja za sprječavanje grešaka — gdje je ugrađeno, koju grešku sprječava i kakav je učinak.',
+    kategorija: 'Kvaliteta',
+    trajanje: '10–15 min',
+    razina: 'Srednja',
+    headerBg: 'bg-pink-50',
+    headerText: 'text-pink-700',
+    border: 'border-pink-300',
+    btnBg: 'bg-pink-600 hover:bg-pink-700',
+    vodicBg: '',
+  },
 ];
 
-const KATEGORIJE = ['Sve', 'Organizacija', 'Dijagnostika', 'Rješavanje problema', 'Analiza uzroka', 'Mjerenje', 'Kontinuirano poboljšanje', 'Mapiranje', 'Fleksibilnost', 'Planiranje', 'Održavanje', 'Standardizacija'];
+const KATEGORIJE = ['Sve', 'Organizacija', 'Dijagnostika', 'Rješavanje problema', 'Analiza uzroka', 'Mjerenje', 'Kontinuirano poboljšanje', 'Mapiranje', 'Fleksibilnost', 'Planiranje', 'Održavanje', 'Standardizacija', 'Kvaliteta'];
 const RAZINE = ['Sve razine', 'Početna', 'Srednja', 'Napredna'];
 
 const RAZINA_COLOR: Record<string, string> = {
